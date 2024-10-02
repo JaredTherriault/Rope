@@ -807,7 +807,6 @@ class GUI(tk.Tk):
         self.target_media_canvas.grid(row=1, column=0, sticky='NEWS', padx=10, pady=10)
         self.target_media_canvas.create_text(8, 20, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Input Videos")
         self.bind_scroll_events(self.target_media_canvas, self.target_videos_mouse_wheel)
-        self.bind_scroll_events(self.layer['InputVideoFrame'], self.target_videos_mouse_wheel)
 
         # Scroll Canvas
         scroll_canvas = tk.Canvas(self.layer['InputVideoFrame'], style.canvas_frame_label_3, bd=0, )
@@ -831,7 +830,6 @@ class GUI(tk.Tk):
         self.source_faces_canvas.grid(row=1, column=2, sticky='NEWS', padx=10, pady=10)
 
         self.bind_scroll_events(self.source_faces_canvas, self.source_faces_mouse_wheel)
-        self.bind_scroll_events(self.layer['InputVideoFrame'], self.source_faces_mouse_wheel)
 
         self.source_faces_canvas.create_text(8, 20, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Input Faces")
 
