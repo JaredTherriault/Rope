@@ -1051,10 +1051,11 @@ class GUI(tk.Tk):
         self.widget['DefaultParamsButton'] = GE.Button(frame, 'DefaultParamsButton', 2, self.parameter_io, 'default', 'control', x=0 , y=8, width=100)
 
         self.layer['parameters_canvas'] = tk.Canvas(self.layer['parameter_frame'], style.canvas_frame_label_3, bd=0, width=width)
-        self.layer['parameters_canvas'].grid(row=1, column=0, sticky='NEWS', pady=0, padx=0)
+        self.parameters_canvas = self.layer['parameters_canvas']
+        self.parameters_canvas.grid(row=1, column=0, sticky='NEWS', pady=0, padx=0)
 
         # Face Editor
-        tabview_main = ctk.CTkTabview(self.layer['parameters_canvas'], width=398, height=2050, corner_radius=6, border_width=1,
+        tabview_main = ctk.CTkTabview(self.parameters_canvas, width=398, height=2050, corner_radius=6, border_width=1,
                                       fg_color=style.main, border_color=style.main3,
                                       segmented_button_selected_hover_color='#b1b1b2',
                                       segmented_button_unselected_hover_color=style.main,
@@ -1066,7 +1067,7 @@ class GUI(tk.Tk):
         tabview_main.pack(fill='both', expand=True)  # Utilizza pack per gestire il layout all'interno del Canvas
 
         # Inserisci il CTkTabview nel Canvas usando create_window
-        self.layer['parameters_canvas'].create_window(0, 0, window=tabview_main, anchor='nw')
+        self.parameters_canvas.create_window(0, 0, window=tabview_main, anchor='nw')
 
         # Aggiungi Tabs al CTkTabview
         tab_face_swapper = tabview_main.add("Face Swapper  ")
@@ -1079,11 +1080,14 @@ class GUI(tk.Tk):
         self.layer['parameters_face_editor_frame'].grid(row=0, column=0, sticky='NEWS', pady=0, padx=0)
 
         self.layer['parameter_scroll_canvas'] = tk.Canvas(self.layer['parameter_frame'], style.canvas_frame_label_3, bd=0, )
-        self.layer['parameter_scroll_canvas'].grid(row=1, column=1, sticky='NEWS', pady=0)
-        self.layer['parameter_scroll_canvas'].grid_rowconfigure(0, weight=1)
-        self.layer['parameter_scroll_canvas'].grid_columnconfigure(0, weight=1)
+        parameter_scroll_canvas = self.layer['parameter_scroll_canvas']
+        parameter_scroll_canvas.grid(row=1, column=1, sticky='NEWS', pady=0)
+        parameter_scroll_canvas.grid_rowconfigure(0, weight=1)
+        parameter_scroll_canvas.grid_columnconfigure(0, weight=1)
 
-        self.static_widget['parameters_scrollbar'] = GE.Scrollbar_y(self.layer['parameter_scroll_canvas'], self.layer['parameters_canvas'])
+        self.static_widget['parameters_scrollbar'] = GE.Scrollbar_y(parameter_scroll_canvas, self.parameters_canvas)
+
+        self.bind_scroll_events(parameter_scroll_canvas, self.parameters_mouse_wheel)
 
         self.static_widget['30'] = GE.Separator_x(parameters_control_frame, 0, 41)
 
@@ -1698,7 +1702,12 @@ class GUI(tk.Tk):
         self.static_widget['input_videos_scrollbar'].set(center)
 
     def parameters_mouse_wheel(self, event, delta = 0):
-        self.canvas.yview_scroll(delta, "units")
+        self.parameters_canvas.yview_scroll(delta, "units")
+
+        # Center of visible canvas as a percentage of the entire canvas
+        center = (self.parameters_canvas.yview()[1]-self.parameters_canvas.yview()[0])/2
+        center = center+self.parameters_canvas.yview()[0]
+        self.static_widget['parameters_scrollbar'].set(center)
 
     # focus_get()
     # def preview_control(self, event):
