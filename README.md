@@ -1,42 +1,21 @@
 ![image](https://github.com/Alucard24/Rope/releases/download/splash/splash_next.png)
 
-Next(Dev)-1.0.05
-
-New Features:
-Add functions to work on torch tensor.
-Lay the groundwork for supporting new providers.
-Ready for Rope-Next-Portable!
-
-Improvements:
-Optimize DFL Model rct function.
-Optimize the apply_face_parser function for performance.
-Optimize CLIPSwitch inference to work entirely on CUDA tensors or CPU tensors.
-
-Changes:
-Change the faceparser model with the updated one. Big Thanks to @yakhyo
-Remove useless code.
-Move DFMModel, FaceEditor, FaceLandmarks and TensorRTPredictor classes into the proper files.
-Remove Rope-cu118.bat and Rope-cu124.bat files.
-Update requirements. Add requests package.
-
-Bug Fixes:
-Fix an issue when providers setting is set to CPU
-
-Next(Dev)-1.0.04
-
-Improvements:
-Improve performance for histogram_matching_DFL_Orig and histogram_matching_DFL_test functions. Now they work without permute operation.
-
-Bug Fixes:
-Fix for an issue on 2nd Restorer when active.
-
-Next(Dev)-1.0.03
-Contributors: @Hans, @mister.nobody.1234
+Next(Stable)-1.1.03
 
 New Features:
 Imported and updated @Hans's changes to work on CUDA tensors without passing through the CPU, except for the JPEG compression feature.
 Added simplify_dfm_onnx.py script to simplify DFM models, enabling them to work with TensorRT/TensorRT-Engine providers, even for those with morph_value:0 as an input parameter.
 (I.E: "python tools\simplify_dfm_onnx.py ./dfl_models ./dfl_models/patched --extension .dfm --dynamic_input morph_value:0")
+Add functions to work on torch tensor.
+Lay the groundwork for supporting new providers.
+Ready for Rope-Next-Portable!
+
+Improvements:
+Optimized DFL models to work directly on CUDA tensors without passing through the CPU. This significantly increases DFL model inference performance.
+Improve performance for histogram_matching_DFL_Orig and histogram_matching_DFL_test functions. Now they work without permute operation.
+Optimize DFL Model rct function.
+Optimize the apply_face_parser function for performance.
+Optimize CLIPSwitch inference to work entirely on CUDA tensors or CPU tensors.
 
 Changes:
 Make tensor options configurable through the trt_ep_options variable.
@@ -44,15 +23,19 @@ Add trt_max_workspace_size property to trt_ep_options variable.
 Update requirements. Add onnxsimplify.
 Update requirements: Add kornia package.
 Add two functions in order to use kornia.geometry.transform.warpaffine.
+Change the faceparser model with the updated one. Big Thanks to @yakhyo
+Remove useless code.
+Move DFMModel, FaceEditor, FaceLandmarks and TensorRTPredictor classes into the proper files.
+Remove Rope-cu118.bat and Rope-cu124.bat files.
+Update requirements. Add requests package.
 
 Bug Fixes:
 Fix autoswap. Big Thanks to @mister.nobody.1234
 Fix issues for histogram_matching_DFL_Orig and histogram_matching_DFL_test functions.
+Fix for an issue on 2nd Restorer when active.
+Fix an issue when providers setting is set to CPU
 
-Improvements:
-Optimized DFL models to work directly on CUDA tensors without passing through the CPU. This significantly increases DFL model inference performance.
-
-Next(Dev)-1.0.02
+Next(Stable)-1.1.02
 
 Changes:
 Apply edit faces only if named parameters are not as default.
@@ -64,7 +47,7 @@ TensorRT 10.4.0 binary files need to be installed following the guide on NVIDIA 
 Bug Fixes:
 Use dtype=object for kpss to manage elements of variable length.
 
-Next(Dev)-1.0.01
+Next(Stable)-1.1.01
 Contributors: @argenspin
 
 New Features:
@@ -80,7 +63,7 @@ Better TensorRT-Engine models detection.
 kpss variable must be an array not a list.
 Always add to kpss, regardless of the length of landmark_kpss.
 
-Next(Dev)-1.0.00
+Next(Stable)-1.1.00
 Contributors: @KwaiVGI, @warmshao, @argenspin
 
 New Features:
