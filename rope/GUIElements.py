@@ -576,7 +576,9 @@ class Timeline():
         if isinstance(event, float):
 
             # Record fps calculcation to history
-            self.fps_history.append(1 / (time.time() - self.last_update_time))
+            delta_time = time.time() - self.last_update_time
+            if delta_time > 0.0:
+                self.fps_history.append(1 / delta_time)
 
             # Maintain sample size
             if len(self.fps_history) > 10:
