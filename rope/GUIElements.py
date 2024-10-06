@@ -499,6 +499,7 @@ class Timeline():
         self.fps = 0
         self.last_update_time = time.time()
         self.fps_history = []
+        self.fps_history_limit = 30
         self.fps_string = tk.StringVar()
         self.fps_string.set("Avg FPS: 0.0/0.0")
 
@@ -581,7 +582,7 @@ class Timeline():
                 self.fps_history.append(1 / delta_time)
 
                 # Maintain sample size
-                if len(self.fps_history) > 10:
+                if len(self.fps_history) > self.fps_history_limit:
                     self.fps_history.pop(0)
 
             # Update last_update_time
