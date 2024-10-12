@@ -33,6 +33,7 @@ from platform import system
 from rope.Dicts import CAMERA_BACKENDS
 from rope.FaceLandmarks import FaceLandmarks
 from rope.FaceEditor import FaceEditor
+from rope.Hovertip import RopeHovertip
 import gc
 
 class GUI(tk.Tk):
@@ -2467,6 +2468,7 @@ class GUI(tk.Tk):
                 self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(videos[i][0])))
 
                 filename = os.path.basename(videos[i][1])
+                hovertip = RopeHovertip(self.target_media_buttons[i], filename, x_offset=190)
                 if len(filename)>32:
                     filename = filename[:29]+'...'
 
