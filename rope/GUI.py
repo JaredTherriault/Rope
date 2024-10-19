@@ -2495,7 +2495,7 @@ class GUI(tk.Tk):
                 self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(videos[i][0])))
 
                 filename = os.path.basename(videos[i][1])
-                hovertip = RopeHovertip(self.target_media_buttons[i], filename)
+                hovertip = RopeHovertip(self.target_media_buttons[i], filename, x_offset=190)
                 if len(filename)>32:
                     filename = filename[:29]+'...'
 
