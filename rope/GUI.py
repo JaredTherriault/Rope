@@ -2164,21 +2164,21 @@ class GUI(tk.Tk):
                         else:
                             face_emb, cropped_image = self.models.run_recognize(img, kpss_5, self.parameters["SimilarityTypeTextSel"], self.parameters['FaceSwapperModelTextSel'])
                             crop = cv2.cvtColor(cropped_image.cpu().numpy(), cv2.COLOR_BGR2RGB)
-                            crop = cv2.resize(crop, (85, 85))
+                            crop = cv2.resize(crop, (50, 50))
 
                             new_source_face = self.source_face.copy()
                             self.source_faces.append(new_source_face)
 
                             self.source_faces[-1]["Image"] = ImageTk.PhotoImage(image=Image.fromarray(crop))
                             self.source_faces[-1]["Embedding"] = face_emb
-                            self.source_faces[-1]["TKButton"] = tk.Button(self.source_faces_canvas, style.media_button_off_3, image=self.source_faces[-1]["Image"], height=90, width=90)
+                            self.source_faces[-1]["TKButton"] = tk.Button(self.source_faces_canvas, style.media_button_off_3, image=self.source_faces[-1]["Image"], height=55, width=55)
                             self.source_faces[-1]["ButtonState"] = False
                             self.source_faces[-1]["file"] = file
 
                             self.source_faces[-1]["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))
                             self.bind_scroll_events(self.source_faces[-1]["TKButton"], self.source_faces_mouse_wheel)
 
-                            self.source_faces_canvas.create_window((i % 2) * 100, (i // 2) * 100, window=self.source_faces[-1]["TKButton"], anchor='nw')
+                            self.source_faces_canvas.create_window((i % 3) * 65, (i // 3) * 65, window=self.source_faces[-1]["TKButton"], anchor='nw')
 
                             self.static_widget['input_faces_scrollbar'].resize_scrollbar(None)
                             i = i + 1
@@ -2519,6 +2519,7 @@ class GUI(tk.Tk):
                 pass
 
     def toggle_auto_swap(self):
+        print("toggle auto swap")
         self.widget['AutoSwapButton'].toggle_button()
 
     def load_target(self, button, media_file, media_type):
