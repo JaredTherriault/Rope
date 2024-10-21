@@ -499,13 +499,20 @@ class VideoManager():
         if self.play == True and self.is_video_loaded == True:
             for item in self.process_qs:
                 if item['Status'] == 'clear' and self.current_frame < self.video_frame_total:
+
                     skip_frame = not self.record and self.current_frame % (self.frame_skip + 1) != 0
-                    item['Thread'] = threading.Thread(target=self.thread_video_read, args = [self.current_frame, skip_frame]).start()
+                    if skip_frame:
+                        with lock:
+                            self.capture.grab() # Advance frame without decoding the image
+                        self.current_frame += 1
+                        continue
+
+                    item['Thread'] = threading.Thread(target=self.thread_video_read, args = [self.current_frame]).start()
                     item['FrameNumber'] = self.current_frame
                     item['Status'] = 'started'
                     item['ThreadTime'] = time.time()
 
-                    self.current_frame += self.frame_skip + 1
+                    self.current_frame += 1
                     break
 
         else:
@@ -514,20 +521,19 @@ class VideoManager():
         # Always be emptying the queues
         time_diff = time.time() - self.frame_timer
 
-        if not self.record and time_diff >= 1.0 / float(self.get_effective_fps()) and self.play:
+        if self.play and not self.record and time_diff >= 1.0 / float(self.get_effective_fps()):
             index, min_frame = self.find_lowest_frame(self.process_qs)
 
             if index != -1:
                 if self.process_qs[index]['Status'] == 'finished':
                     processed_frame_number = self.process_qs[index]['FrameNumber']
 
-                    if processed_frame_number % (self.frame_skip + 1) == 0:
-                        temp = [self.process_qs[index]['ProcessedFrame'], processed_frame_number]
-                        self.frame_q.append(temp)
+                    temp = [self.process_qs[index]['ProcessedFrame'], processed_frame_number]
+                    self.frame_q.append(temp)
 
                     # Report fps, other data
                     self.fps_average.append(1.0/time_diff)
-                    avg_fps = self.fps / self.fps_average[-1] if self.fps_average else 10
+                    avg_fps = self.get_effective_fps() / self.fps_average[-1] if self.fps_average else 10
 
                     # self.send_to_virtual_camera(temp[0], 15)
                     if self.control['VirtualCameraSwitch'] and self.virtcam:
@@ -537,19 +543,21 @@ class VideoManager():
                             self.virtcam.sleep_until_next_frame()
                         except Exception as e:
                             print(e)
-                    if len(self.fps_average) >= floor(self.fps):
+                    if len(self.fps_average) >= floor(self.get_effective_fps()):
                         fps = round(np.average(self.fps_average), 2)
                         msg = "%s fps, %s process time" % (fps, round(self.process_qs[index]['ThreadTime'], 4))
                         self.fps_average = []
 
                     if processed_frame_number >= self.video_frame_total-1 or processed_frame_number == self.stop_marker:
+                        print("stop video")
                         self.play_video('stop')
 
                     self.process_qs[index]['Status'] = 'clear'
                     self.process_qs[index]['Thread'] = []
                     self.process_qs[index]['FrameNumber'] = []
                     self.process_qs[index]['ThreadTime'] = 0.0
-                    self.frame_timer += 1.0 / self.get_effective_fps()
+                    self.frame_timer += (1.0 / float(self.get_effective_fps()))
+
 
         if not self.webcam_selected(self.video_file):
             if self.record:
@@ -617,14 +625,14 @@ class VideoManager():
             self.add_action('disable_record_button', False)
 
     # @profile
-    def thread_video_read(self, frame_number, skip_frame = False):
+    def thread_video_read(self, frame_number):
 
         with lock:
             success, target_image = self.capture.read()
 
         if success:
             target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
-            if skip_frame or not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
+            if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
                 temp = [target_image, frame_number]
 
             else:
