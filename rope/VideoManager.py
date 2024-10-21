@@ -79,6 +79,8 @@ class VideoManager():
         self.target_video = []
 
         self.fps = 1.0
+        self.playback_fps = 6              # Desired playback FPS
+        self.frame_interval = 0
         self.temp_file = []
 
         self.start_time = []
@@ -190,6 +192,9 @@ class VideoManager():
             self.is_image_loaded = False
             if not self.webcam_selected(file):
                 self.video_frame_total = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
+
+                self.frame_interval = 0
+
             else:
                 self.video_frame_total = 99999999
             self.play = False
@@ -487,6 +492,9 @@ class VideoManager():
     def process(self):
         process_qs_len = range(len(self.process_qs))
 
+        if self.frame_interval < 1:
+            self.frame_interval = (self.fps / self.playback_fps)
+
         # Add threads to Queue
         if self.play == True and self.is_video_loaded == True:
             for item in self.process_qs:
@@ -496,7 +504,7 @@ class VideoManager():
                     item['Status'] = 'started'
                     item['ThreadTime'] = time.time()
 
-                    self.current_frame += 1
+                    self.current_frame += self.frame_interval
                     break
 
         else:
@@ -505,8 +513,7 @@ class VideoManager():
         # Always be emptying the queues
         time_diff = time.time() - self.frame_timer
 
-        if not self.record and time_diff >= 1.0/float(self.fps) and self.play:
-
+        if not self.record and time_diff >= 1.0 / float(self.playback_fps) and self.play:
             index, min_frame = self.find_lowest_frame(self.process_qs)
 
             if index != -1:
@@ -537,8 +544,8 @@ class VideoManager():
                     self.process_qs[index]['Status'] = 'clear'
                     self.process_qs[index]['Thread'] = []
                     self.process_qs[index]['FrameNumber'] = []
-                    self.process_qs[index]['ThreadTime'] = []
-                    self.frame_timer += 1.0/self.fps
+                    self.process_qs[index]['ThreadTime'] = 0.0
+                    self.frame_timer += 1.0/self.playback_fps
 
         if not self.webcam_selected(self.video_file):
             if self.record:
@@ -606,9 +613,44 @@ class VideoManager():
             self.add_action('disable_record_button', False)
 
     # @profile
+    def extract_frame(self, frame_number):
+        # Construct the ffmpeg command to output raw image data
+        command = [
+            'ffmpeg',
+            '-ss', str(frame_number / self.fps),        # Start time to seek
+            '-i', self.video_file,                      # Input video file
+            '-vframes', '1',                            # Output one frame
+            '-f', 'image2pipe',                         # Output format to pipe
+            '-vcodec', 'mjpeg',                           # Output codec (can use jpg, png, etc.)
+            '-']                                        # Output to stdout
+
+        # Execute the command and capture the output
+        try:
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, error = process.communicate()
+
+            if process.returncode != 0:
+                print(f"Error occurred: {error.decode()}")
+                return None
+
+            # Read the image from output
+            image = cv2.imdecode(np.frombuffer(output, np.uint8), cv2.IMREAD_COLOR)
+
+            return image
+
+        except Exception as e:
+            print(f"An exception occurred: {e}")
+            return None
+
+    # @profile
     def thread_video_read(self, frame_number):
-        with lock:
-            success, target_image = self.capture.read()
+
+        if self.playback_fps == self.fps:
+            with lock:
+                success, target_image = self.capture.read()
+        else:
+            success = True
+            target_image = self.extract_frame(frame_number)
 
         if success:
             target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
@@ -1692,7 +1734,7 @@ class VideoManager():
             13: parameters['LowerLipParserSlider'], #Lower Lip
             14: parameters['NeckParserSlider'], #Neck
         }
-        
+
         # Pre-calculated kernel for dilation (3x3 kernel to reduce iterations)
         kernel = torch.ones((1, 1, 3, 3), dtype=torch.float32, device=self.models.device)  # Kernel 3x3
 
