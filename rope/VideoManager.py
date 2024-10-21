@@ -79,8 +79,7 @@ class VideoManager():
         self.target_video = []
 
         self.fps = 1.0
-        self.playback_fps = 6              # Desired playback FPS
-        self.frame_interval = 0
+        self.frame_skip = 1
         self.temp_file = []
 
         self.start_time = []
@@ -192,8 +191,6 @@ class VideoManager():
             self.is_image_loaded = False
             if not self.webcam_selected(file):
                 self.video_frame_total = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
-
-                self.frame_interval = 0
 
             else:
                 self.video_frame_total = 99999999
@@ -488,23 +485,27 @@ class VideoManager():
 
             self.audio_sp = None
 
+    def get_effective_fps(self):
+        if self.record:
+            return self.fps
+
+        return self.fps / (self.frame_skip + 1)
+
     # @profile
     def process(self):
         process_qs_len = range(len(self.process_qs))
-
-        if self.frame_interval < 1:
-            self.frame_interval = (self.fps / self.playback_fps)
 
         # Add threads to Queue
         if self.play == True and self.is_video_loaded == True:
             for item in self.process_qs:
                 if item['Status'] == 'clear' and self.current_frame < self.video_frame_total:
-                    item['Thread'] = threading.Thread(target=self.thread_video_read, args = [self.current_frame]).start()
+                    skip_frame = not self.record and self.current_frame % (self.frame_skip + 1) != 0
+                    item['Thread'] = threading.Thread(target=self.thread_video_read, args = [self.current_frame, skip_frame]).start()
                     item['FrameNumber'] = self.current_frame
                     item['Status'] = 'started'
                     item['ThreadTime'] = time.time()
 
-                    self.current_frame += self.frame_interval
+                    self.current_frame += self.frame_skip + 1
                     break
 
         else:
@@ -513,13 +514,16 @@ class VideoManager():
         # Always be emptying the queues
         time_diff = time.time() - self.frame_timer
 
-        if not self.record and time_diff >= 1.0 / float(self.playback_fps) and self.play:
+        if not self.record and time_diff >= 1.0 / float(self.get_effective_fps()) and self.play:
             index, min_frame = self.find_lowest_frame(self.process_qs)
 
             if index != -1:
                 if self.process_qs[index]['Status'] == 'finished':
-                    temp = [self.process_qs[index]['ProcessedFrame'], self.process_qs[index]['FrameNumber']]
-                    self.frame_q.append(temp)
+                    processed_frame_number = self.process_qs[index]['FrameNumber']
+
+                    if processed_frame_number % (self.frame_skip + 1) == 0:
+                        temp = [self.process_qs[index]['ProcessedFrame'], processed_frame_number]
+                        self.frame_q.append(temp)
 
                     # Report fps, other data
                     self.fps_average.append(1.0/time_diff)
@@ -538,14 +542,14 @@ class VideoManager():
                         msg = "%s fps, %s process time" % (fps, round(self.process_qs[index]['ThreadTime'], 4))
                         self.fps_average = []
 
-                    if self.process_qs[index]['FrameNumber'] >= self.video_frame_total-1 or self.process_qs[index]['FrameNumber'] == self.stop_marker:
+                    if processed_frame_number >= self.video_frame_total-1 or processed_frame_number == self.stop_marker:
                         self.play_video('stop')
 
                     self.process_qs[index]['Status'] = 'clear'
                     self.process_qs[index]['Thread'] = []
                     self.process_qs[index]['FrameNumber'] = []
                     self.process_qs[index]['ThreadTime'] = 0.0
-                    self.frame_timer += 1.0/self.playback_fps
+                    self.frame_timer += 1.0 / self.get_effective_fps()
 
         if not self.webcam_selected(self.video_file):
             if self.record:
@@ -613,48 +617,14 @@ class VideoManager():
             self.add_action('disable_record_button', False)
 
     # @profile
-    def extract_frame(self, frame_number):
-        # Construct the ffmpeg command to output raw image data
-        command = [
-            'ffmpeg',
-            '-ss', str(frame_number / self.fps),        # Start time to seek
-            '-i', self.video_file,                      # Input video file
-            '-vframes', '1',                            # Output one frame
-            '-f', 'image2pipe',                         # Output format to pipe
-            '-vcodec', 'mjpeg',                           # Output codec (can use jpg, png, etc.)
-            '-']                                        # Output to stdout
+    def thread_video_read(self, frame_number, skip_frame = False):
 
-        # Execute the command and capture the output
-        try:
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            output, error = process.communicate()
-
-            if process.returncode != 0:
-                print(f"Error occurred: {error.decode()}")
-                return None
-
-            # Read the image from output
-            image = cv2.imdecode(np.frombuffer(output, np.uint8), cv2.IMREAD_COLOR)
-
-            return image
-
-        except Exception as e:
-            print(f"An exception occurred: {e}")
-            return None
-
-    # @profile
-    def thread_video_read(self, frame_number):
-
-        if self.playback_fps == self.fps:
-            with lock:
-                success, target_image = self.capture.read()
-        else:
-            success = True
-            target_image = self.extract_frame(frame_number)
+        with lock:
+            success, target_image = self.capture.read()
 
         if success:
             target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
-            if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
+            if skip_frame or not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
                 temp = [target_image, frame_number]
 
             else:
