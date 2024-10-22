@@ -79,8 +79,17 @@ class VideoManager():
         self.target_video = []
 
         self.fps = 1.0
-        self.frame_skip = 1
         self.temp_file = []
+
+        # Frame skipping
+        self.frame_skip_type = "auto" # "none", "manual", or "auto"
+        self.use_auto_frame_skip = False
+        self.manual_frame_skip = 0
+        self.auto_frame_skip = 0
+        self.auto_frame_skip_deviation_threshold = 0.016
+        self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
+        self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
+        self.number_of_consecutive_frames_auto_frame_skip_deviation_threshold_tolerance = 10
 
         self.start_time = []
         self.record = False
@@ -191,6 +200,10 @@ class VideoManager():
             self.is_image_loaded = False
             if not self.webcam_selected(file):
                 self.video_frame_total = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
+
+                self.auto_frame_skip = 0
+                self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
+                self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
 
             else:
                 self.video_frame_total = 99999999
@@ -485,11 +498,21 @@ class VideoManager():
 
             self.audio_sp = None
 
-    def get_effective_fps(self):
+    def get_current_frame_skip_value(self):
+
+        if self.frame_skip_type == "manual":
+            return self.manual_frame_skip
+
+        if self.frame_skip_type == "auto":
+            return self.auto_frame_skip
+
+        return 0
+
+    def get_effective_fps_target(self):
         if self.record:
             return self.fps
 
-        return self.fps / (self.frame_skip + 1)
+        return self.fps / (self.get_current_frame_skip_value() + 1)
 
     # @profile
     def process(self):
@@ -500,7 +523,7 @@ class VideoManager():
             for item in self.process_qs:
                 if item['Status'] == 'clear' and self.current_frame < self.video_frame_total:
 
-                    skip_frame = not self.record and self.current_frame % (self.frame_skip + 1) != 0
+                    skip_frame = not self.record and self.current_frame % (self.get_current_frame_skip_value() + 1) != 0
                     if skip_frame:
                         with lock:
                             self.capture.grab() # Advance frame without decoding the image
@@ -521,7 +544,9 @@ class VideoManager():
         # Always be emptying the queues
         time_diff = time.time() - self.frame_timer
 
-        if self.play and not self.record and time_diff >= 1.0 / float(self.get_effective_fps()):
+        target_delta_time = 1.0 / float(self.get_effective_fps_target())
+
+        if self.play and not self.record and time_diff >= target_delta_time:
             index, min_frame = self.find_lowest_frame(self.process_qs)
 
             if index != -1:
@@ -533,7 +558,7 @@ class VideoManager():
 
                     # Report fps, other data
                     self.fps_average.append(1.0/time_diff)
-                    avg_fps = self.get_effective_fps() / self.fps_average[-1] if self.fps_average else 10
+                    avg_fps = self.get_effective_fps_target() / self.fps_average[-1] if self.fps_average else 10
 
                     # self.send_to_virtual_camera(temp[0], 15)
                     if self.control['VirtualCameraSwitch'] and self.virtcam:
@@ -543,7 +568,7 @@ class VideoManager():
                             self.virtcam.sleep_until_next_frame()
                         except Exception as e:
                             print(e)
-                    if len(self.fps_average) >= floor(self.get_effective_fps()):
+                    if len(self.fps_average) >= floor(self.get_effective_fps_target()):
                         fps = round(np.average(self.fps_average), 2)
                         msg = "%s fps, %s process time" % (fps, round(self.process_qs[index]['ThreadTime'], 4))
                         self.fps_average = []
@@ -552,11 +577,46 @@ class VideoManager():
                         print("stop video")
                         self.play_video('stop')
 
+                    actual_thread_delta_time = self.process_qs[index]['ThreadTime']
+
                     self.process_qs[index]['Status'] = 'clear'
                     self.process_qs[index]['Thread'] = []
                     self.process_qs[index]['FrameNumber'] = []
                     self.process_qs[index]['ThreadTime'] = 0.0
-                    self.frame_timer += (1.0 / float(self.get_effective_fps()))
+
+                    self.frame_timer += target_delta_time
+
+                    if self.frame_skip_type == "auto":
+
+                        # print(f"actual_thread_delta_time: {actual_thread_delta_time}")
+                        # print(f"actual_thread_delta_time_difference: {abs(actual_thread_delta_time - target_delta_time)}")
+
+                        # Increase auto skip
+                        if actual_thread_delta_time - target_delta_time > self.auto_frame_skip_deviation_threshold:
+
+                            self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold += 1
+                            self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
+
+                            if self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold > self.number_of_consecutive_frames_auto_frame_skip_deviation_threshold_tolerance:
+                                self.auto_frame_skip += 1
+                                print(f"auto_frame_skip: {self.auto_frame_skip}")
+                                self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
+
+                        # Decrease auto skip
+                        elif self.auto_frame_skip > 0 and abs(actual_thread_delta_time - target_delta_time) < self.auto_frame_skip_deviation_threshold:
+
+                            self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold += 1
+                            self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
+
+                            if self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold > self.number_of_consecutive_frames_auto_frame_skip_deviation_threshold_tolerance:
+                                self.auto_frame_skip = max(0, self.auto_frame_skip - 1)
+                                print(f"auto_frame_skip: {self.auto_frame_skip}")
+                                self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
+
+                        # Reset auto skip frame counts
+                        else:
+                            self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
+                            self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
 
 
         if not self.webcam_selected(self.video_file):
