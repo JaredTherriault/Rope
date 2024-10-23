@@ -1130,6 +1130,13 @@ class GUI(tk.Tk):
         row = row + 1
         self.widget['VirtualCameraSwitch'] = GE.Switch2(self.layer['parameters_frame'], 'VirtualCameraSwitch', 'Send Frames to Virtual Camera', 3, self.toggle_virtualcam, 'control', 398, 20, row, 0, padx, pady)
 
+        # Frame Skip
+        row = row + 1
+        self.widget['FrameSkipModeTextSel'] = GE.TextSelection(self.layer['parameters_frame'], 'FrameSkipModeTextSel', 'Frame Skip Mode', 3, self.update_data, 'parameter', 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        row = row + 1
+        self.widget['FramesToSkip'] = GE.Slider2(self.layer['parameters_frame'], 'FramesToSkip', 'Frames to skip', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+
+
         # Restore
         row = row + 1
         self.widget['RestorerSwitch'] = GE.Switch2(self.layer['parameters_frame'], 'RestorerSwitch', 'Restorer', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady)

@@ -791,6 +791,17 @@ DEFAULT_DATA = {
 'SwapperTypeTextSelMode':          '128',
 'SwapperTypeTextSelModes':         ['128', '256', '512'],
 
+# Frame skip
+'FrameSkipModeTextSelInfoText':    'FRAME SKIP MODE:\nAllow video playback to skip frames. Does not affect recording.\nMANUAL: Set a constant skip rate.\nAUTO: Allow Rope to set the number of frames to skip based on the video playback speed, trying to maintain the original timing.',
+'FrameSkipModeTextSelMode':        'none',
+'FrameSkipModeTextSelModes':       ['none', 'manual', 'auto'],
+
+'FramesToSkipInfoText':     'FRAMES TO SKIP (MANUAL): How many frames to explicitly skip when set to "manual". Has no effect otherwise.',
+'FramesToSkipAmount':       1,
+'FramesToSkipInc':       1,
+'FramesToSkipMin':       1,
+'FramesToSkipMax':       10,
+#
 # Text Entry
 'CLIPTextEntry':    '',
 'CLIPTextEntryInfoText':            'TEXT MASKING ENTRY:\nTo use, type a word(s) in the box separated by commas and press <enter>.',
