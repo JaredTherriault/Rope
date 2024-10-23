@@ -82,14 +82,10 @@ class VideoManager():
         self.temp_file = []
 
         # Frame skipping
-        self.frame_skip_type = "auto" # "none", "manual", or "auto"
-        self.use_auto_frame_skip = False
-        self.manual_frame_skip = 0
         self.auto_frame_skip = 0
-        self.auto_frame_skip_deviation_threshold = 0.016
-        self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
-        self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
-        self.number_of_consecutive_frames_auto_frame_skip_deviation_threshold_tolerance = 10
+        self.frames_over_auto_frame_skip_threshold = 0
+        self.frames_under_auto_frame_skip_threshold = 0
+        self.auto_frame_skip_tolerance = 15
 
         self.start_time = []
         self.record = False
@@ -202,8 +198,8 @@ class VideoManager():
                 self.video_frame_total = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
                 self.auto_frame_skip = 0
-                self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
-                self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
+                self.frames_over_auto_frame_skip_threshold = 0
+                self.frames_under_auto_frame_skip_threshold = 0
 
             else:
                 self.video_frame_total = 99999999
@@ -500,10 +496,13 @@ class VideoManager():
 
     def get_current_frame_skip_value(self):
 
-        if self.frame_skip_type == "manual":
-            return self.manual_frame_skip
+        if 'FrameSkipModeTextSel' not in self.parameters or  'FramesToSkip' not in self.parameters:
+            return 0
 
-        if self.frame_skip_type == "auto":
+        if self.parameters['FrameSkipModeTextSel'] == "manual":
+            return self.parameters['FramesToSkip']
+
+        if self.parameters['FrameSkipModeTextSel'] == "auto":
             return self.auto_frame_skip
 
         return 0
@@ -513,6 +512,50 @@ class VideoManager():
             return self.fps
 
         return self.fps / (self.get_current_frame_skip_value() + 1)
+
+    def evaluate_auto_frame_skip(self, actual_delta_time, target_delta_time):
+
+        if self.parameters['FrameSkipModeTextSel'] == "auto":
+
+            delta_difference = actual_delta_time - target_delta_time
+
+            print(f"actual_delta_time: {actual_delta_time}")
+            print(f"target_delta_time: {target_delta_time}")
+            print(f"delta_difference: {delta_difference}")
+
+            auto_frame_skip_deviation_threshold = 1.0 / self.fps
+
+            # Increase auto skip
+            if delta_difference > auto_frame_skip_deviation_threshold:
+
+                self.frames_over_auto_frame_skip_threshold += 1
+                self.frames_under_auto_frame_skip_threshold = 0
+
+                print(f"count_over_threshold: {self.frames_over_auto_frame_skip_threshold}")
+
+                if self.frames_over_auto_frame_skip_threshold > self.auto_frame_skip_tolerance:
+                    self.auto_frame_skip += 1
+                    self.frames_over_auto_frame_skip_threshold = 0
+
+            # Decrease auto skip
+            elif self.auto_frame_skip > 0 and delta_difference < auto_frame_skip_deviation_threshold:
+
+                self.frames_under_auto_frame_skip_threshold += 1
+                self.frames_over_auto_frame_skip_threshold = 0
+                print(f"count_under_threshold: {self.frames_under_auto_frame_skip_threshold}")
+
+                if self.frames_under_auto_frame_skip_threshold > self.auto_frame_skip_tolerance:
+                    self.auto_frame_skip = max(0, self.auto_frame_skip - 1)
+                    self.frames_under_auto_frame_skip_threshold = 0
+
+            # Reset auto skip frame counts
+            else:
+                self.frames_over_auto_frame_skip_threshold = 0
+                self.frames_under_auto_frame_skip_threshold = 0
+
+                print("counts reset")
+
+            print(f"auto_frame_skip: {self.auto_frame_skip}")
 
     # @profile
     def process(self):
@@ -586,37 +629,7 @@ class VideoManager():
 
                     self.frame_timer += target_delta_time
 
-                    if self.frame_skip_type == "auto":
-
-                        # print(f"actual_thread_delta_time: {actual_thread_delta_time}")
-                        # print(f"actual_thread_delta_time_difference: {abs(actual_thread_delta_time - target_delta_time)}")
-
-                        # Increase auto skip
-                        if actual_thread_delta_time - target_delta_time > self.auto_frame_skip_deviation_threshold:
-
-                            self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold += 1
-                            self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
-
-                            if self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold > self.number_of_consecutive_frames_auto_frame_skip_deviation_threshold_tolerance:
-                                self.auto_frame_skip += 1
-                                print(f"auto_frame_skip: {self.auto_frame_skip}")
-                                self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
-
-                        # Decrease auto skip
-                        elif self.auto_frame_skip > 0 and abs(actual_thread_delta_time - target_delta_time) < self.auto_frame_skip_deviation_threshold:
-
-                            self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold += 1
-                            self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
-
-                            if self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold > self.number_of_consecutive_frames_auto_frame_skip_deviation_threshold_tolerance:
-                                self.auto_frame_skip = max(0, self.auto_frame_skip - 1)
-                                print(f"auto_frame_skip: {self.auto_frame_skip}")
-                                self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
-
-                        # Reset auto skip frame counts
-                        else:
-                            self.number_of_consecutive_frames_over_auto_frame_skip_deviation_threshold = 0
-                            self.number_of_consecutive_frames_under_auto_frame_skip_deviation_threshold = 0
+                    self.evaluate_auto_frame_skip(actual_thread_delta_time, target_delta_time)
 
 
         if not self.webcam_selected(self.video_file):
