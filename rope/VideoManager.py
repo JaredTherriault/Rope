@@ -704,6 +704,23 @@ class VideoManager():
             success, target_image = self.capture.read()
 
         if success:
+
+            if self.parameters['ResolutionOverrideSwitch']:
+
+                max_height = self.parameters['HeightOverrideSlider']
+
+                # Get the original dimensions
+                height, width = target_image.shape[:2]
+
+                # Check if the frame height is greater than the maximum height
+                if height > max_height:
+                    # Calculate the scaling factor
+                    scale = max_height / height
+                    new_width = int(width * scale)
+                    new_height = max_height
+                    # Resize the frame
+                    target_image = cv2.resize(target_image, (new_width, new_height))
+
             target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
             if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
                 temp = [target_image, frame_number]
