@@ -249,6 +249,9 @@ DEFAULT_DATA = {
 'VirtualCameraSwitchState':         False,
 'VirtualCameraSwitchInfoText':      'VIRTUAL CAMERA:\nFeed the swapped video output to virtual camera for using in external applications',
 
+'ResolutionOverrideSwitchState':    False,
+'ResolutionOverrideSwitchInfoText': 'OVERRIDE RESOLUTION:\nPlayback and recording will be downsampled to the specified height while maintaining aspect ratio. May help performance. Does not upsample.',
+
 'RestoreEyesSwitchInfoText':        'RESTORE EYES: \nRestore eyes from the original face',
 'RestoreEyesSwitchState':           False,
 'RestoreMouthSwitchInfoText':       'RESTORE MOUTH: \nRestore mouth from the original face',
@@ -610,6 +613,11 @@ DEFAULT_DATA = {
 'OrientSliderInfoText':             'ORIENTATION ANGLE:\nSet this to the angle of the input face angle to help with laying down/upside down/etc. Angles are read clockwise.',
 'OrientSliderMax':                  270,
 'OrientSliderMin':                  0,
+'HeightOverrideSliderAmount':       480,
+'HeightOverrideSliderInc':          60,
+'HeightOverrideSliderInfoText':     'HEIGHT:\nSpecifies a height at which the video should be downsampled in playback and recording.',
+'HeightOverrideSliderMax':          2160,
+'HeightOverrideSliderMin':          120,
 'RestorerSliderAmount':             100,
 'RestorerSliderInc':                5,
 'RestorerSliderInfoText':           'RESTORER AMOUNT:\nBlends the Restored results back into the original swap.',
