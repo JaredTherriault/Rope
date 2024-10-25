@@ -2126,6 +2126,7 @@ class GUI(tk.Tk):
                 new_source_face = self.source_face.copy()
 
                 new_source_face["ButtonState"] = False
+                new_source_face["LockedButtonState"] = False
                 new_source_face["Embedding"] = temp0[j][1]
 
                 text_width = text_font.measure('ABCDEFGHIJKLMNO')
@@ -2211,6 +2212,7 @@ class GUI(tk.Tk):
                             self.source_faces[-1]["Embedding"] = face_emb
                             self.source_faces[-1]["TKButton"] = tk.Button(self.source_faces_canvas, style.media_button_off_3, image=self.source_faces[-1]["Image"], height=55, width=55)
                             self.source_faces[-1]["ButtonState"] = False
+                            self.source_faces[-1]["LockedButtonState"] = False
                             self.source_faces[-1]["file"] = file
 
                             self.source_faces[-1]["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))
@@ -2302,15 +2304,22 @@ class GUI(tk.Tk):
         self.target_faces[button]["ButtonState"] = True
         self.target_faces[button]["TKButton"].config(style.media_button_on_3)
 
-        # set all source face buttons to off
+        # set all source face buttons to off (unless locked)
         for i in range(len(self.source_faces)):
-            self.source_faces[i]["ButtonState"] = False
-            self.source_faces[i]["TKButton"].config(style.media_button_off_3)
+            if not self.source_faces[i]["LockedButtonState"]:
+                self.source_faces[i]["ButtonState"] = False
+                self.source_faces[i]["TKButton"].config(style.media_button_off_3)
+            else:
+                self.select_input_faces("none", i)
 
         # turn back on the ones that are assigned to the curent target face
         for i in range(len(self.target_faces[button]["SourceFaceAssignments"])):
             self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["ButtonState"] = True
-            self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["TKButton"].config(style.media_button_on_3)
+
+            is_locked = self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["LockedButtonState"] == True
+            button_style = style.media_button_on_lock_3 if is_locked else style.media_button_on_3
+
+            self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["TKButton"].config(button_style)
 
     def select_input_faces(self, event, button):
 
@@ -2319,6 +2328,8 @@ class GUI(tk.Tk):
                 modifier = 'ctrl'
             elif event.state & 0x1 != 0:
                 modifier = 'shift'
+            elif event.state & 0x8 != 0:
+                modifier = 'alt'
             else:
                 modifier = 'none'
         except:
@@ -2333,11 +2344,13 @@ class GUI(tk.Tk):
 
                 # and also clear the states if not selecting multiples
                 if modifier == 'none':
-                    face["ButtonState"] = False
+                    if face["LockedButtonState"] == False:
+                        face["ButtonState"] = False
 
             # Toggle the state of the selected Input Face
             if modifier != 'merge':
-                self.source_faces[button]["ButtonState"] = not self.source_faces[button]["ButtonState"]
+                if not self.source_faces[button]["LockedButtonState"]:
+                    self.source_faces[button]["ButtonState"] = not self.source_faces[button]["ButtonState"]
 
             # if shift find any other input faces and activate the state of all faces in between
             if modifier == 'shift':
@@ -2351,23 +2364,33 @@ class GUI(tk.Tk):
                             messagebox.showinfo('You cannot combine DFL Models!','You cannot combine DFL Models!')
                             for face in self.source_faces:
                                 face['ButtonState'] = False
+                                face["LockedButtonState"] = False
                             break
 
                 for i in range(button-1, self.shift_i_len-1, -1):
-                    if self.source_faces[i]["ButtonState"]:
+                    if not self.source_faces[i]["LockedButtonState"] and self.source_faces[i]["ButtonState"]:
                         for j in range(i, button, 1):
                             self.source_faces[j]["ButtonState"] = True
                         break
                 for i in range(button+1, len(self.source_faces), 1):
-                    if self.source_faces[i]["ButtonState"]:
+                    if not self.source_faces[i]["LockedButtonState"] and self.source_faces[i]["ButtonState"]:
                         for j in range(button, i, 1):
                             self.source_faces[j]["ButtonState"] = True
                         break
 
+            if modifier == "alt":
+                self.source_faces[button]["LockedButtonState"] = not self.source_faces[button]["LockedButtonState"]
+                self.source_faces[button]["ButtonState"] = self.source_faces[button]["LockedButtonState"]
+
             # Highlight all of input faces buttons that have a true state
             for face in self.source_faces:
-                if face["ButtonState"]:
-                    face["TKButton"].config(style.media_button_on_3)
+                if face["ButtonState"] or face["LockedButtonState"]:
+
+                    if face["LockedButtonState"] == True:
+                        face["TKButton"].config(style.media_button_on_lock_3)
+                    else:
+                        face["TKButton"].config(style.media_button_on_3)
+
                     if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
                         self.add_action("load_target_image", face["file"])
                         self.image_loaded = True
@@ -2393,7 +2416,7 @@ class GUI(tk.Tk):
                 for j in range(len(self.source_faces)):
 
                     # If the source face is active
-                    if self.source_faces[j]["ButtonState"]:
+                    if self.source_faces[j]["ButtonState"] or self.source_faces[j]["LockedButtonState"]:
                         tface["SourceFaceAssignments"].append(j)
                         # Only append embedding if it is not a DFL model
                         if not self.source_faces[j]['DFLModel']:
@@ -2527,17 +2550,17 @@ class GUI(tk.Tk):
             self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
 
     def auto_swap(self):
-            # Reselect Target Image
-            try:
-                self.find_faces()
-                self.target_faces[0]["ButtonState"] = True
-                self.target_faces[0]["TKButton"].config(style.media_button_on_3)
+        # Reselect Target Image
+        try:
+            self.find_faces()
+            self.target_faces[0]["ButtonState"] = True
+            self.target_faces[0]["TKButton"].config(style.media_button_on_3)
 
-                # Reselect Source images
-                self.select_input_faces('auto', '')
-                self.toggle_swapper(True)
-            except:
-                pass
+            # Reselect Source images
+            self.select_input_faces('auto', '')
+            self.toggle_swapper(True)
+        except:
+            pass
 
     def toggle_auto_swap(self):
         print("toggle auto swap")
