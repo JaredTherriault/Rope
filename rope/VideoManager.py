@@ -50,7 +50,6 @@ class VideoManager():
         self.is_video_loaded = False        # flag for video loaded state
         self.video_frame_total = None       # length of currently loaded video
         self.play = False                   # flag for the play button toggle
-        self.loop = False                   # flag for whether to loop the video
         self.current_frame = 0              # the current frame of the video
         self.create_video = False
         self.output_video = []
@@ -571,13 +570,6 @@ class VideoManager():
                         self.temp_file]
 
                 self.sp = subprocess.Popen(args, stdin=subprocess.PIPE)
-
-        elif command == "loop_on":
-            self.loop = True
-
-        elif command == "loop_off":
-            self.loop = False
-
     def terminate_audio_process_tree(self):
         if hasattr(self, 'audio_sp') and self.audio_sp is not None:
             parent_pid = self.audio_sp.pid
@@ -733,14 +725,8 @@ class VideoManager():
                         self.fps_average = []
 
                     if processed_frame_number >= self.video_frame_total-1 or processed_frame_number == self.stop_marker:
-
-                        if self.loop:
-                            with lock:
-                                self.current_frame = 0
-                                self.play_video("play")
-                        else:
-                            self.play_video('stop')
-
+                        print("stop video")
+                        self.play_video('stop')
 
                     actual_thread_delta_time = self.process_qs[index]['ThreadTime']
 
