@@ -2240,6 +2240,11 @@ class GUI(tk.Tk):
     def find_faces(self):
         try:
             img = torch.from_numpy(self.video_image).to(self.models.device)
+
+            # Discard Alpha channel if it exists
+            if img.shape[2] == 4:
+                img = img[:, :, :3] 
+
             img = img.permute(2,0,1)
             if self.parameters["AutoRotationSwitch"]:
                 rotation_angles = [0, 90, 180, 270]
@@ -2252,9 +2257,9 @@ class GUI(tk.Tk):
                 face_emb, cropped_img = self.models.run_recognize(img, face_kps, self.parameters["SimilarityTypeTextSel"], self.parameters['FaceSwapperModelTextSel'])
                 ret.append([face_kps, face_emb, cropped_img])
 
-        except Exception:
-            messagebox.showinfo('No Media', 'No media selected')
-            print(" No media selected")
+        except Exception as e:
+            messagebox.showinfo('No Media', 'No appropriate media selected for find_faces method.')
+            print(f"No appropriate media selected for find_faces method: {e}")
 
         else:
             # Find all faces and add to target_faces[]
