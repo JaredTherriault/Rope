@@ -910,8 +910,6 @@ class GUI(tk.Tk):
         # Left Side
         self.layer['play_controls_left'] = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, width=200 )
         self.layer['play_controls_left'].grid(row=0, column=0, sticky='NEWS', pady=0)
-        self.widget['SaveImageButton'] = GE.Button(self.layer['play_controls_left'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=5, width=100)
-        self.widget['AutoSwapButton'] = GE.Button(self.layer['play_controls_left'], 'AutoSwapButton', 2, self.toggle_auto_swap, None, 'control', x=100, y=5, width=100)
 
         # Center
         cente_frame = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, )
@@ -948,8 +946,7 @@ class GUI(tk.Tk):
         self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
         self.layer['image_controls'].grid(row=2, column=0, rowspan=2, sticky='NEWS', pady=0)
         self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=5, width=100)
-
-        self.layer['image_controls'].grid_forget()
+        self.widget['AutoSwapButton'] = GE.Button(self.layer['image_controls'], 'AutoSwapButton', 2, self.toggle_auto_swap, None, 'control', x=150, y=5, width=100)
 
     # FaceLab
         self.layer['FaceLab_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
@@ -2894,7 +2891,6 @@ class GUI(tk.Tk):
         self.layer['slider_frame'].grid_forget()
         self.layer['preview_frame'].grid_forget()
         self.layer['markers_canvas'].grid_forget()
-        self.layer['image_controls'].grid_forget()
         self.layer['FaceLab_controls'].grid_forget()
         self.layer['InputVideoFrame'].grid_forget()
         self.layer['parameter_frame'].grid_forget()
@@ -2918,7 +2914,6 @@ class GUI(tk.Tk):
 
         elif self.widget['PreviewModeTextSel'].get()=='Image':
             self.video_loaded = False
-            self.layer['image_controls'].grid(row=2, column=0, rowspan=2, sticky='NEWS', pady=0)
 
             self.layer['parameters_canvas'].grid(row=1, column=0, sticky='NEWS', pady=0, padx=0)
             self.layer['parameter_scroll_canvas'].grid(row=1, column=1, sticky='NEWS', pady=0)
