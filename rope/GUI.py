@@ -67,7 +67,8 @@ class GUI(tk.Tk):
         super().__init__()
 
         self.models = models
-        self.title('Rope-Next-00')
+        self.title_text = 'Rope-Next-00'
+        self.title(self.title_text)
         self.target_media = []
         self.target_video_file = []
         self.action_q = []
@@ -2616,6 +2617,8 @@ class GUI(tk.Tk):
             self.add_action("load_target_image", media_file)
             self.media_file_name = os.path.splitext(os.path.basename(media_file))
             self.image_loaded = True
+
+        self.title(f"{self.title_text} - {os.path.basename(media_file)}")
 
         # # find faces
         if self.widget['AutoSwapButton'].get():
