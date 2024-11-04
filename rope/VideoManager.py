@@ -539,6 +539,13 @@ class VideoManager():
                         self.fps_average = []
 
                     if self.process_qs[index]['FrameNumber'] >= self.video_frame_total-1 or self.process_qs[index]['FrameNumber'] == self.stop_marker:
+                        
+                        if self.loop:
+                            with lock:
+                                self.current_frame = 0
+                                self.play_video("play")
+                        else:
+                            self.play_video('stop')
 
                     self.process_qs[index]['Status'] = 'clear'
                     self.process_qs[index]['Thread'] = []
