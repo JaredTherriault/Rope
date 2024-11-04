@@ -438,6 +438,12 @@ class VideoManager():
                     index=idx
         return index, min_frame
 
+    def is_animated_image(self):
+        return self.file_name[1].lower() in [".gif", ".webp", ".png", ".apng", ".mjpeg"]
+    
+    def should_use_cv_recording(self):
+        return self.is_animated_image() or self.parameters['RecordTypeTextSel']=='OPENCV'
+
     def play_video(self, command):
         if command == "play":
             # Initialization
@@ -542,9 +548,13 @@ class VideoManager():
             self.file_name = os.path.splitext(os.path.basename(self.target_video))
             base_filename =  self.file_name[0]+"_"+str(time.time())[:10]
             self.output = os.path.join(self.saved_video_path, base_filename)
-            self.temp_file = self.output+"_temp"+self.file_name[1]
+            self.temp_file = self.output+"_temp"+(self.file_name[1] if not self.is_animated_image() else ".mp4")
 
-            if self.parameters['RecordTypeTextSel']=='FFMPEG':
+            if self.should_use_cv_recording():
+                size = (frame_width, frame_height)
+                self.sp = cv2.VideoWriter(self.temp_file,  cv2.VideoWriter_fourcc(*'mp4v') , self.fps, size)
+
+            elif self.parameters['RecordTypeTextSel']=='FFMPEG':
                 args =  ["ffmpeg",
                         '-hide_banner',
                         '-loglevel',    'error',
@@ -560,11 +570,6 @@ class VideoManager():
                         self.temp_file]
 
                 self.sp = subprocess.Popen(args, stdin=subprocess.PIPE)
-
-            elif self.parameters['RecordTypeTextSel']=='OPENCV':
-                size = (frame_width, frame_height)
-                self.sp = cv2.VideoWriter(self.temp_file,  cv2.VideoWriter_fourcc(*'mp4v') , self.fps, size)
-
     def terminate_audio_process_tree(self):
         if hasattr(self, 'audio_sp') and self.audio_sp is not None:
             parent_pid = self.audio_sp.pid
@@ -745,13 +750,13 @@ class VideoManager():
                     if self.process_qs[index]['Status'] == 'finished':
                         image = self.process_qs[index]['ProcessedFrame']
 
-                        if self.parameters['RecordTypeTextSel']=='FFMPEG':
+                        if self.should_use_cv_recording():
+                            self.sp.write(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+
+                        elif self.parameters['RecordTypeTextSel']=='FFMPEG':
 
                             pil_image = Image.fromarray(image)
                             pil_image.save(self.sp.stdin, 'BMP')
-
-                        elif self.parameters['RecordTypeTextSel']=='OPENCV':
-                            self.sp.write(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
 
                         temp = [image, self.process_qs[index]['FrameNumber']]
                         self.frame_q.append(temp)
@@ -763,14 +768,14 @@ class VideoManager():
                             if stop_time == 0:
                                 stop_time = float(self.video_frame_total) / float(self.fps)
 
-                            if self.parameters['RecordTypeTextSel']=='FFMPEG':
+                            if self.should_use_cv_recording():
+                                self.sp.release()
+                            elif self.parameters['RecordTypeTextSel']=='FFMPEG':
                                 self.sp.stdin.close()
                                 self.sp.wait()
-                            elif self.parameters['RecordTypeTextSel']=='OPENCV':
-                                self.sp.release()
 
                             orig_file = self.target_video
-                            final_file = self.output+self.file_name[1]
+                            final_file = self.output+(self.file_name[1] if not self.is_animated_image() else ".mp4")
                             print("adding audio...")
                             args = ["ffmpeg",
                                     '-hide_banner',
@@ -783,7 +788,8 @@ class VideoManager():
                                     final_file]
 
                             four = subprocess.run(args)
-                            os.remove(self.temp_file)
+                            if os.path.exists(self.temp_file):
+                                os.remove(self.temp_file)
 
                             timef= time.time() - self.timer
                             self.record = False
