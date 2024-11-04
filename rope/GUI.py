@@ -942,11 +942,11 @@ class GUI(tk.Tk):
         # self.widget['StopMarkerButton'] = GE.Button(right_playframe, 'StopMarkerButton', 2, self.update_marker, 'stop', 'control', x=100, y=5, width=20)
         self.widget['SaveMarkerButton'] = GE.Button(right_playframe, 'SaveMarkerButton', 2, self.save_markers_json, None, 'control', x=95, y=5, width=20)
 
-    # Images
-        self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
-        self.layer['image_controls'].grid(row=2, column=0, rowspan=2, sticky='NEWS', pady=0)
-        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=5, width=100)
-        self.widget['AutoSwapButton'] = GE.Button(self.layer['image_controls'], 'AutoSwapButton', 2, self.toggle_auto_swap, None, 'control', x=150, y=5, width=100)
+    # Image controls
+        self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=33)
+        self.layer['image_controls'].grid(row=5, column=0, sticky='NEWS', pady=0)
+        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=0, width=100, height=33)
+        self.widget['AutoSwapButton'] = GE.Button(self.layer['image_controls'], 'AutoSwapButton', 2, self.toggle_auto_swap, None, 'control', x=125, y=0, width=100, height=33)
 
     # FaceLab
         self.layer['FaceLab_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
@@ -956,7 +956,7 @@ class GUI(tk.Tk):
 
       # Found Faces
         ff_frame = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_1)
-        ff_frame.grid(row=5, column=0, sticky='NEWS', pady=1)
+        ff_frame.grid(row=6, column=0, sticky='NEWS', pady=1)
         ff_frame.grid_columnconfigure(0, weight=0)
         ff_frame.grid_columnconfigure(1, weight=1)
         ff_frame.grid_rowconfigure(0, weight=0)
@@ -981,7 +981,7 @@ class GUI(tk.Tk):
 
       # Merged Faces
         mf_frame = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_1)
-        mf_frame.grid(row=6, column=0, sticky='NEWS', pady=0)
+        mf_frame.grid(row=7, column=0, sticky='NEWS', pady=0)
         mf_frame.grid_columnconfigure(0, minsize=10)
         mf_frame.grid_columnconfigure(1, weight=1)
         mf_frame.grid_rowconfigure(0, weight=0)
