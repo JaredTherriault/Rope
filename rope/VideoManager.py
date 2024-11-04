@@ -50,6 +50,7 @@ class VideoManager():
         self.is_video_loaded = False        # flag for video loaded state
         self.video_frame_total = None       # length of currently loaded video
         self.play = False                   # flag for the play button toggle
+        self.loop = False                   # flag for whether to loop the video
         self.current_frame = 0              # the current frame of the video
         self.create_video = False
         self.output_video = []
@@ -454,6 +455,12 @@ class VideoManager():
                 size = (frame_width, frame_height)
                 self.sp = cv2.VideoWriter(self.temp_file,  cv2.VideoWriter_fourcc(*'mp4v') , self.fps, size)
 
+        elif command == "loop_on":
+            self.loop = True
+
+        elif command == "loop_off":
+            self.loop = False
+
     def terminate_audio_process_tree(self):
         if hasattr(self, 'audio_sp') and self.audio_sp is not None:
             parent_pid = self.audio_sp.pid
@@ -532,7 +539,6 @@ class VideoManager():
                         self.fps_average = []
 
                     if self.process_qs[index]['FrameNumber'] >= self.video_frame_total-1 or self.process_qs[index]['FrameNumber'] == self.stop_marker:
-                        self.play_video('stop')
 
                     self.process_qs[index]['Status'] = 'clear'
                     self.process_qs[index]['Thread'] = []

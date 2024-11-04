@@ -145,6 +145,7 @@ class GUI(tk.Tk):
                     "Nudge Right 30 Frames": "d",
                     "Record": "r",
                     "Play": "space",
+                    "Loop": "l",
                     "Save Image": "ctrl+s",
                     "Add Marker": "f",
                     "Delete Marker": "alt+f",
@@ -180,6 +181,7 @@ class GUI(tk.Tk):
             shortcuts["Record"]: lambda: self.toggle_rec_video(),
             shortcuts["Play"]: lambda: self.toggle_play_video(),
             shortcuts["Nudge Right 30 Frames"]: lambda: self.preview_control('d'),
+            shortcuts["Loop"]: lambda: self.toggle_loop_video(),
             shortcuts["Save Image"]: lambda: self.save_image(),
             shortcuts["Add Marker"]: lambda: self.update_marker('add'),
             shortcuts["Delete Marker"]: lambda: self.update_marker('delete'),
@@ -406,6 +408,7 @@ class GUI(tk.Tk):
                 shortcuts["Record"]: lambda: self.toggle_rec_video(),
                 shortcuts["Play"]: lambda: self.toggle_play_video(),
                 shortcuts["Nudge Right 30 Frames"]: lambda: self.preview_control('d'),
+                shortcuts["Loop"]: lambda: self.toggle_loop_video(),
                 shortcuts["Save Image"]: lambda: self.save_image(),
                 shortcuts["Add Marker"]: lambda: self.update_marker('add'),
                 shortcuts["Delete Marker"]: lambda: self.update_marker('delete'),
@@ -918,7 +921,7 @@ class GUI(tk.Tk):
         cente_frame.grid_columnconfigure(0, weight=0)
         cente_frame.grid_rowconfigure(0, weight=0)
 
-        play_control_frame = tk.Frame(cente_frame, style.canvas_frame_label_2, height=30, width=270  )
+        play_control_frame = tk.Frame(cente_frame, style.canvas_frame_label_2, height=30, width=300  )
         play_control_frame.place(anchor="c", relx=.5, rely=.5)
 
         column = 0
@@ -932,6 +935,8 @@ class GUI(tk.Tk):
         self.widget['TLPlayButton'] = GE.Button(play_control_frame, 'Play', 2, self.toggle_play_video, None, 'control', x=column , y=2, width=20)
         column += col_delta
         self.widget['TLRightButton'] = GE.Button(play_control_frame, 'TLRight', 2, self.preview_control, 'd', 'control', x=column , y=2, width=20)
+        column += col_delta
+        self.widget['TLLoopButton'] = GE.Button(play_control_frame, 'Loop', 2, self.toggle_loop_video, None, 'control', x=column , y=2, width=20)
 
         # Right Side
         right_playframe = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, width=120)
@@ -2779,6 +2784,18 @@ class GUI(tk.Tk):
 
             else:
                 self.widget['TLRecButton'].disable_button()
+
+    def toggle_loop_video(self):
+
+        self.widget['TLLoopButton'].toggle_button()
+
+        if self.widget['TLLoopButton'].get():
+            self.widget['TLLoopButton'].enable_button()
+            self.add_action("play_video", "loop_on")
+
+        else:
+            self.widget['TLLoopButton'].disable_button()
+            self.add_action("play_video", "loop_off")
 
     # this makes no sense
     def add_action(self, action, parameter=None): #
