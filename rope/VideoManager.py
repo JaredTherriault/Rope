@@ -669,7 +669,10 @@ class VideoManager():
                     skip_frame = not self.record and self.current_frame % (self.get_current_frame_skip_value() + 1) != 0
                     if skip_frame:
                         with lock:
-                            self.capture.grab() # Advance frame without decoding the image
+                            try:
+                                self.capture.grab() # Advance frame without decoding the image
+                            except: 
+                                pass # PIL fallback
                         self.current_frame += 1
                         continue
 
