@@ -2608,12 +2608,14 @@ class GUI(tk.Tk):
         self.clear_faces()
 
         if media_type == 'Video':
-            self.video_slider.set(0)
+            self.add_action("play_video", "stop")
             self.add_action("load_target_video", media_file)
             self.media_file_name = os.path.splitext(os.path.basename(media_file))
+            self.video_slider.set(0)
             self.video_loaded = True
 
         elif media_type == 'Image':
+            self.add_action("play_video", "stop")
             self.add_action("load_target_image", media_file)
             self.media_file_name = os.path.splitext(os.path.basename(media_file))
             self.image_loaded = True
