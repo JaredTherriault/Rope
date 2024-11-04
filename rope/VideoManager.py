@@ -1,7 +1,7 @@
 import os
 import cv2
 import tkinter as tk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageSequence
 import threading
 import time
 import numpy as np
@@ -46,7 +46,7 @@ class VideoManager():
         self.FFHQ_kps = np.array([[ 192.98138, 239.94708 ], [ 318.90277, 240.1936 ], [ 256.63416, 314.01935 ], [ 201.26117, 371.41043 ], [ 313.08905, 371.15118 ] ])
 
         #Video related
-        self.capture = []                   # cv2 video
+        self.capture = []                   # cv2 / PIL video
         self.is_video_loaded = False        # flag for video loaded state
         self.video_frame_total = None       # length of currently loaded video
         self.play = False                   # flag for the play button toggle
@@ -165,7 +165,10 @@ class VideoManager():
     def load_target_video( self, file ):
         # If we already have a video loaded, release it
         if self.capture:
-            self.capture.release()
+            try:
+                self.capture.release()
+            except:
+                pass
 
         if self.control['VirtualCameraSwitch']:
             self.add_action("set_virtual_cam_toggle_disable",None)
@@ -184,7 +187,6 @@ class VideoManager():
 
         else:
             self.capture = cv2.VideoCapture(file)
-            self.fps = self.capture.get(cv2.CAP_PROP_FPS)
 
         if not self.capture.isOpened():
             if self.webcam_selected(file):
@@ -194,48 +196,105 @@ class VideoManager():
             self.target_video = file
             self.is_video_loaded = True
             self.is_image_loaded = False
-            if not self.webcam_selected(file):
-                self.video_frame_total = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
-
-                self.auto_frame_skip = 0
-                self.frames_over_auto_frame_skip_threshold = 0
-                self.frames_under_auto_frame_skip_threshold = 0
-
-            else:
-                self.video_frame_total = 99999999
+            self.auto_frame_skip = 0
+            self.frames_over_auto_frame_skip_threshold = 0
+            self.frames_under_auto_frame_skip_threshold = 0
             self.play = False
             self.current_frame = 0
             self.frame_timer = time.time()
             self.frame_q = []
             self.r_frame_q = []
             self.found_faces = []
-            self.add_action("set_slider_length",self.video_frame_total-1)
-            self.add_action("set_slider_fps",self.fps)
 
-        self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
-        success, image = self.capture.read()
+            success = False
 
-        if success:
-            crop = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # RGB
-            temp = [crop, False]
-            self.r_frame_q.append(temp)
-            self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+            try:
+                # If OpenCV opened successfully
 
-            # Face Landmarks
-            if self.face_landmarks:
-                self.face_landmarks.remove_all_data()
-                self.face_landmarks.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+                if not self.webcam_selected(file):
+                    self.video_frame_total = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
+                else:
+                    self.video_frame_total = 99999999
 
-            # Face Editor
-            if self.face_editor:
-                self.face_editor.remove_all_data()
-                self.face_editor.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+                if self.video_frame_total > 0:
+                    self.add_action("set_slider_length",self.video_frame_total-1)
+                
+                self.fps = self.capture.get(cv2.CAP_PROP_FPS)
 
-            self.add_action("clear_stop_enhance", None)
+                if self.fps > 0:
+                    self.add_action("set_slider_fps",self.fps)
+
+                # Read the first frame with OpenCV
+                self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+                success, image = self.capture.read()
+
+                if success:
+                    crop = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert to RGB
+                    temp = [crop, False]
+                    self.r_frame_q.append(temp)
+                    self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+
+                else:
+                    print("Cannot open file with OpenCV, attempting to open with PIL.")
+                    try:
+                        self.capture = Image.open(file)
+
+                        frames = list(ImageSequence.Iterator(self.capture))
+
+                        # Short loop to get needed metadata
+                        original_frame_time = None
+                        for image in frames:
+                            if original_frame_time is None:
+                                if "duration" not in image.info:
+                                    image.load()
+                                original_frame_time = image.info.get("duration", None)
+                                break
+
+                        if original_frame_time is None:
+                            raise Exception(f"Could not get original_frame_time from media: {media_path}")
+
+                        self.video_frame_total = len(frames)
+                        self.add_action("set_slider_length",self.video_frame_total-1)
+                        
+                        self.fps = 1000 / original_frame_time
+                        self.add_action("set_slider_fps",self.fps)
+
+                        # Read the first frame
+                        self.capture.seek(self.current_frame)  # Move to the current frame
+                        image = np.array(self.capture)  # Convert to NumPy array
+
+                        if len(image) > 0:                            
+                            temp = [image, False]
+                            self.r_frame_q.append(temp)
+
+                            success = True
+
+                    except Exception as e:
+                        print(f"Failed to load video with PIL: {e}")
+
+            except Exception as e:
+                print(f"Failed to load video with CV or PIL: {e}")
+                return
+
+            if success:
+
+                # Handle face landmarks and editor (if applicable)
+                if self.face_landmarks:
+                    self.face_landmarks.remove_all_data()
+                    self.face_landmarks.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+
+                if self.face_editor:
+                    self.face_editor.remove_all_data()
+                    self.face_editor.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+
+                self.add_action("clear_stop_enhance", None)
 
     def load_target_image(self, file):
         if self.capture:
-            self.capture.release()
+            try:
+                self.capture.release()
+            except:
+                pass
         self.is_video_loaded = False
         self.play = False
         self.frame_q = []
@@ -294,47 +353,76 @@ class VideoManager():
     def get_requested_video_frame(self, frame, marker=True):
         temp = []
         if self.is_video_loaded:
-
-            if self.play == True:
+            if self.play:
                 self.play_video("stop")
                 self.process_qs = []
 
             # Face Landmarks
             apply_landmarks = (self.current_frame != int(frame))
-            #
             self.current_frame = int(frame)
 
-            self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
-            success, target_image = self.capture.read() #BGR
+            try:
+                # Try to read the frame using OpenCV
+                self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+                success, target_image = self.capture.read()  # BGR
 
-            if success:
-                # Face Landmarks
+                if success:
+                    # Process frame with OpenCV
+                    if self.parameters['LandmarksPositionAdjSwitch'] and apply_landmarks and self.face_landmarks:
+                        self.face_landmarks.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+
+                    if apply_landmarks and self.face_editor:
+                        self.face_editor.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+
+                    target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)  # Convert to RGB
+                    if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
+                        temp = [target_image, self.current_frame]  # temp = RGB
+                    else:
+                        temp = [self.swap_video(target_image, self.current_frame, marker), self.current_frame]  # temp = RGB
+
+                    if self.control['EnhanceFrameButton']:
+                        temp[0] = self.enhance_video(temp[0], self.current_frame, marker)  # temp = RGB
+
+                    self.r_frame_q.append(temp)
+                    return  # Early exit if successful
+
+            except Exception as e:
+                print(f"Failed to get frame from OpenCV, trying PIL: {e}")
+
+            # If we reach this point, OpenCV failed, try using PIL
+            try:
+                self.capture.seek(self.current_frame)  # Move to the current frame
+                target_image = self.capture.convert('RGB')  # Ensure it's in RGB mode
+                target_image = np.array(target_image)  # Convert to NumPy array
+
+                # Process the frame with PIL
                 if self.parameters['LandmarksPositionAdjSwitch'] and apply_landmarks and self.face_landmarks:
                     self.face_landmarks.apply_changes_to_widget_and_parameters(self.current_frame, 1)
 
-                # Face Editor
                 if apply_landmarks and self.face_editor:
                     self.face_editor.apply_changes_to_widget_and_parameters(self.current_frame, 1)
 
-                target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB) #RGB
                 if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
-                    temp = [target_image, self.current_frame] #temp = RGB
+                    temp = [target_image, self.current_frame]  # temp = RGB
                 else:
-                    temp = [self.swap_video(target_image, self.current_frame, marker), self.current_frame] # temp = RGB
+                    temp = [self.swap_video(target_image, self.current_frame, False), self.current_frame]  # temp = RGB
 
                 if self.control['EnhanceFrameButton']:
-                    temp[0] = self.enhance_video(temp[0], self.current_frame, marker) # temp = RGB
+                    temp[0] = self.enhance_video(temp[0], self.current_frame, False)  # temp = RGB
 
                 self.r_frame_q.append(temp)
+
+            except Exception as e:
+                print(f"Failed to get frame from PIL: {e}")
+
         elif self.is_image_loaded:
             if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
-                temp = [self.image, self.current_frame] # image = RGB
-
+                temp = [self.image, self.current_frame]  # image = RGB
             else:
-                temp = [self.swap_video(self.image, self.current_frame, False), self.current_frame] # image = RGB
+                temp = [self.swap_video(self.image, self.current_frame, False), self.current_frame]  # image = RGB
 
             if self.control['EnhanceFrameButton']:
-                temp[0] = self.enhance_video(temp[0], self.current_frame, False) # image = RGB
+                temp[0] = self.enhance_video(temp[0], self.current_frame, False)  # image = RGB
 
             self.r_frame_q.append(temp)
 
@@ -351,19 +439,22 @@ class VideoManager():
         return index, min_frame
 
     def play_video(self, command):
-        # print(inspect.currentframe().f_back.f_code.co_name, '->play_video: ')
         if command == "play":
             # Initialization
             self.play = True
             self.fps_average = []
             self.process_qs = []
-            self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
             self.frame_timer = time.time()
+
+            try:
+                self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+            except:
+                self.capture.seek(self.current_frame)
 
             # Create reusable queue based on number of threads
             for i in range(self.parameters['ThreadsSlider']):
-                    new_process_q = self.process_q.copy()
-                    self.process_qs.append(new_process_q)
+                new_process_q = self.process_q.copy()
+                self.process_qs.append(new_process_q)
 
             # Start up audio if requested
             if self.control['AudioButton']:
@@ -387,7 +478,10 @@ class VideoManager():
                         try:
                             sought_time = float(temp[:7].strip())
                             self.current_frame = int(self.fps*sought_time)
-                            self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+                            try:
+                                self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+                            except:
+                                self.capture.seek(self.current_frame)
                         except Exception as e:
                             #print(e)
                             pass
@@ -426,18 +520,24 @@ class VideoManager():
             self.play = True
             self.total_thread_time = 0.0
             self.process_qs = []
-            self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
 
             for i in range(self.parameters['ThreadsSlider']):
-                    new_process_q = self.process_q.copy()
-                    self.process_qs.append(new_process_q)
+                new_process_q = self.process_q.copy()
+                self.process_qs.append(new_process_q)
 
            # Initialize
             self.timer = time.time()
-            frame_width = int(self.capture.get(3))
-            frame_height = int(self.capture.get(4))
 
-            self.start_time = float(self.capture.get(cv2.CAP_PROP_POS_FRAMES) / float(self.fps))
+            try:
+                self.capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+                frame_width = int(self.capture.get(3))
+                frame_height = int(self.capture.get(4))
+            except:
+                self.capture.seek(self.current_frame)
+                frame_width = self.capture.width
+                frame_height = self.capture.height
+
+            self.start_time = float(self.current_frame / float(self.fps))
 
             self.file_name = os.path.splitext(os.path.basename(self.target_video))
             base_filename =  self.file_name[0]+"_"+str(time.time())[:10]
@@ -656,7 +756,7 @@ class VideoManager():
                         # Close video and process
                         if self.process_qs[index]['FrameNumber'] >= self.video_frame_total-1 or self.process_qs[index]['FrameNumber'] == self.stop_marker or self.play == False:
                             self.play_video("stop")
-                            stop_time = float(self.capture.get(cv2.CAP_PROP_POS_FRAMES) / float(self.fps))
+                            stop_time = float(self.current_frame / float(self.fps))
                             if stop_time == 0:
                                 stop_time = float(self.video_frame_total) / float(self.fps)
 
@@ -701,9 +801,24 @@ class VideoManager():
     def thread_video_read(self, frame_number):
 
         with lock:
-            success, target_image = self.capture.read()
+            try:
+                success, target_image = self.capture.read()
 
-        if success:
+                if success:
+                    target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
+                else:
+                    raise ValueError("Failed to read frame with OpenCV")
+
+            except: 
+                # Fallback to using PIL
+                try:
+                    self.capture.seek(frame_number)  # Seek to the desired frame number
+                    target_image = np.array(self.capture.convert("RGB"))  # Convert to NumPy array
+                except Exception as e:
+                    print("PIL failed:", e)
+                    return  # Exit if both methods fail
+
+        if len(target_image) > 0:
 
             if self.parameters['ResolutionOverrideSwitch']:
 
@@ -722,6 +837,7 @@ class VideoManager():
                     target_image = cv2.resize(target_image, (new_width, new_height))
 
             target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
+
             if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
                 temp = [target_image, frame_number]
 

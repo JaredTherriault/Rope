@@ -4,7 +4,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog, font
 import numpy as np
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageSequence
 import json
 import time
 import copy
@@ -2493,11 +2493,26 @@ class GUI(tk.Tk):
             else:
                 # Its an image
                 if file_type == 'image':
+                    is_animated = False
                     try:
-                        image = cv2.imread(file)
-                        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    except:
-                        print('Trouble reading file:', file)
+                        try:
+                            image = cv2.imread(file)
+                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                        except:
+                            # Open with Pillow
+                            with Image.open(file) as img:
+
+                                frames = list(ImageSequence.Iterator(img))
+
+                                if len(frames) > 1:
+                                    is_animated = True
+
+                                # If it's an animated GIF, use the first frame
+                                img = img.convert('RGB')  # Ensure it has RGB mode
+                                image = np.array(img)
+
+                    except Exception as e:
+                        print(f"Trouble reading file '{file}': {e}")
                     else:
                         ratio = float(image.shape[0]) / image.shape[1]
 
@@ -2505,7 +2520,11 @@ class GUI(tk.Tk):
                         new_width = int(new_height / ratio)
                         image = cv2.resize(image, (new_width, new_height))
                         image[:new_height, :new_width, :] = image
-                        images.append([image, file])
+
+                        if is_animated:
+                            videos.append([image, file])
+                        else:
+                            images.append([image, file])
 
                 # Its a video
                 elif file_type == 'video':
