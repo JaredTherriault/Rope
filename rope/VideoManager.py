@@ -836,8 +836,6 @@ class VideoManager():
                     # Resize the frame
                     target_image = cv2.resize(target_image, (new_width, new_height))
 
-            target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
-
             if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
                 temp = [target_image, frame_number]
 
