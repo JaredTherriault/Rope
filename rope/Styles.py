@@ -232,6 +232,16 @@ media_button_on_3= {
     'font':             ("Segoe UI", 8)
     }
 
+media_button_on_lock_3= {
+    'bg':               '#4caf50',
+    'fg':               '#FFFFFF',
+    'activebackground': '#4caf50',
+    'activeforeground': 'white',
+    'relief':           'flat',
+    'border':           '0',
+    'font':             ("Segoe UI", 8)
+    }
+
 ui_text_na_2 =    {
     'bg':               main,
     'fg':               '#7A7A7A',
