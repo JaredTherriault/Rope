@@ -2411,14 +2411,16 @@ class GUI(tk.Tk):
                         except:
                             # Open with Pillow
                             with Image.open(file) as img:
+
+                                frames = list(ImageSequence.Iterator(img))
+
+                                if len(frames) > 1:
+                                    is_animated = True
+
                                 # If it's an animated GIF, use the first frame
                                 img = img.convert('RGB')  # Ensure it has RGB mode
                                 image = np.array(img)
 
-                                frames = list(ImageSequence.Iterator(img))
-
-                                if len(frames) > 0:
-                                    is_animated = True
                     except Exception as e:
                         print(f"Trouble reading file '{file}': {e}")
                     else:
