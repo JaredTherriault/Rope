@@ -20,7 +20,6 @@ DEFAULT_DATA = {
 'AudioInfoText':             'ENABLE REAL-TIME AUDIO:\nAdds audio from the input video during preview playback. If you are unable to maintain the input video frame rate, the audio will lag.',
 'AudioState':               False,
 'AudioText':                'Enable Audio',
-'AutoSwapState':            False,
 'ClearFacesDisplay':        'text',
 'ClearFacesIcon':            './rope/media/tarfacedel.png',
 'ClearFacesIconHover':      './rope/media/rec.png',
@@ -165,10 +164,9 @@ DEFAULT_DATA = {
 'SaveImageButtonState':                     False,
 'SaveImageButtonText':             'Save Image',
 
-'AutoSwapButtonDisplay':                   'text',
-'AutoSwapButtonInfoText':                  'AUTOSWAP:\nAutomatcially applies your currently selected Input Face to new images.',
-'AutoSwapButtonState':                     False,
-'AutoSwapButtonText':             'Auto Swap',
+'AutoSwapTextSelInfoText':        'AUTOSWAP:\nAutomatcially applies your currently selected Input Face to new images.\nSAME: Use the same input faces\nRANDOM: Randomize input faces (locked faces not affected)',
+'AutoSwapTextSelMode':            'off',
+'AutoSwapTextSelModes':           ['off', 'same', 'random'],
 
 'ClearVramButtonDisplay':                   'text',
 'ClearVramButtonInfoText':                  'CLEAR VRAM:\nClears models from your VRAM.',
@@ -938,7 +936,6 @@ PARAMS =   {
     'ClearmemFunction':         'self.clear_mem()',
     'PerfTestFunction':         'self.toggle_perf_test()',
     'ImgVidFunction':         'self.toggle_vid_img()',
-    'AutoSwapFunction':         'self.toggle_auto_swap()',
     'SaveImageFunction':         'self.save_image()',
 
     'ClearmemIcon':            './rope/media/clear_mem.png',
@@ -966,7 +963,6 @@ PARAMS =   {
 
     'ImgVidMessage':         'IMAGE/VIDEO - Toggle between Image and Video folder view.',
     'ToggleStopMessage':         'STOP MARKER - Sets a frame that will stop the video playing/recording.',
-    'AutoSwapMessage':         'AUTO SWAP - Automatically swaps the first person in an image to the selcted source faces [LB: Turn on/off]',
     'SaveImageMessage':         'SAVE IMAGE - Save image to output folder',
     'ClearmemMessage':         'CLEAR VRAM - Clears all models from VRAM [LB: Clear]',
     'PerfTestMessage':         'PERFORMANCE DATA - Displays timing data in the console for critical Rope functions. [LB: on/off]',

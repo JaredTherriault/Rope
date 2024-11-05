@@ -16,7 +16,7 @@ import customtkinter as ctk
 torchvision.disable_beta_transforms_warning()
 import mimetypes
 import webbrowser
-from random import random
+from random import random, randint
 
 import rope.GUIElements as GE
 import rope.Styles as style
@@ -945,8 +945,14 @@ class GUI(tk.Tk):
     # Image controls
         self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=33)
         self.layer['image_controls'].grid(row=5, column=0, sticky='NEWS', pady=0)
-        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=0, width=100, height=33)
-        self.widget['AutoSwapButton'] = GE.Button(self.layer['image_controls'], 'AutoSwapButton', 2, self.toggle_auto_swap, None, 'control', x=125, y=0, width=100, height=33)
+
+        self.layer['image_controls_save_image_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, width=130, height=33)
+        self.layer['image_controls_save_image_frame'].grid(row=0, column=0, sticky='E', pady=0)
+        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls_save_image_frame'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=0, width=100, height=33)
+        
+        self.layer['image_controls_auto_swap_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, height=33)
+        self.layer['image_controls_auto_swap_frame'].grid(row=0, column=1, sticky='E', pady=0)
+        self.widget['AutoSwapTextSel'] = GE.TextSelection(self.layer['image_controls_auto_swap_frame'], 'AutoSwapTextSel', 'Auto Swap', 3, self.update_data, 'control', 'control', 220, 33, 0, 0, 0, 0, 0.72)
 
     # FaceLab
         self.layer['FaceLab_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
@@ -2247,6 +2253,24 @@ class GUI(tk.Tk):
 
     def select_input_faces(self, event, button):
 
+        def higlight_selected_faces(button_index):
+            # Highlight all of input faces buttons that have a true state
+            for face in self.source_faces:
+                if face["ButtonState"]:
+                    face["TKButton"].config(style.media_button_on_3)
+                    if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
+                        self.add_action("load_target_image", face["file"])
+                        self.image_loaded = True
+
+            if self.source_faces[button_index]['DFLModel']:
+                # Clear DFL models from memory
+                if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
+                    for model in list(self.models.dfl_models):
+                        if model!=self.source_faces[button_index]['DFLModel']:
+                            del self.models.dfl_models[model]._sess
+                            del self.models.dfl_models[model]
+                    gc.collect()
+
         try:
             if event.state & 0x4 != 0:
                 modifier = 'ctrl'
@@ -2257,16 +2281,19 @@ class GUI(tk.Tk):
         except:
             modifier = event
 
-        # If autoswap isnt on
-        # Clear all the highlights. Clear all states, excpet if a modifier is being used
-        # Start by turning off all the highlights on the input faces buttons
-        if modifier != 'auto':
+        def clear_faces():
             for face in self.source_faces:
                 face["TKButton"].config(style.media_button_off_3)
 
                 # and also clear the states if not selecting multiples
-                if modifier == 'none':
+                if modifier == 'none' or modifier == 'random':
                     face["ButtonState"] = False
+
+        # If autoswap isnt on
+        # Clear all the highlights. Clear all states, excpet if a modifier is being used
+        # Start by turning off all the highlights on the input faces buttons
+        if modifier != 'same' and modifier != 'random':
+            clear_faces()
 
             # Toggle the state of the selected Input Face
             if modifier != 'merge':
@@ -2297,22 +2324,15 @@ class GUI(tk.Tk):
                             self.source_faces[j]["ButtonState"] = True
                         break
 
-            # Highlight all of input faces buttons that have a true state
-            for face in self.source_faces:
-                if face["ButtonState"]:
-                    face["TKButton"].config(style.media_button_on_3)
-                    if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
-                        self.add_action("load_target_image", face["file"])
-                        self.image_loaded = True
+            higlight_selected_faces(button)
 
-            if self.source_faces[button]['DFLModel']:
-                # Clear DFL models from memory
-                if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
-                    for model in list(self.models.dfl_models):
-                        if model!=self.source_faces[button]['DFLModel']:
-                            del self.models.dfl_models[model]._sess
-                            del self.models.dfl_models[model]
-                    gc.collect()
+        if modifier == 'random':
+            clear_faces()
+            face_count = len(self.source_faces)
+            random_index = randint(0, face_count - 1)
+            print(random_index)
+            self.source_faces[random_index]["ButtonState"] = True
+            higlight_selected_faces(random_index)
 
         # Assign all active input faces to the active target face
         for tface in self.target_faces:
@@ -2475,19 +2495,18 @@ class GUI(tk.Tk):
 
     def auto_swap(self):
             # Reselect Target Image
+            auto_swap_state = self.widget['AutoSwapTextSel'].get()
             try:
                 self.find_faces()
                 self.target_faces[0]["ButtonState"] = True
                 self.target_faces[0]["TKButton"].config(style.media_button_on_3)
 
                 # Reselect Source images
-                self.select_input_faces('auto', '')
+                self.select_input_faces(auto_swap_state, '')
                 self.toggle_swapper(True)
-            except:
+            except Exception as e:
+                print(f"Exception in auto_swap: {e}")
                 pass
-
-    def toggle_auto_swap(self):
-        self.widget['AutoSwapButton'].toggle_button()
 
     def load_target(self, button, media_file, media_type):
         # Make sure the video stops playing
@@ -2508,7 +2527,8 @@ class GUI(tk.Tk):
             self.image_loaded = True
 
         # # find faces
-        if self.widget['AutoSwapButton'].get():
+        auto_swap_state = self.widget['AutoSwapTextSel'].get()
+        if auto_swap_state != "off":
             self.add_action('function', "gui.auto_swap()")
 
         for i in range(len(self.target_media_buttons)):
