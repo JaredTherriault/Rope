@@ -2431,7 +2431,6 @@ class GUI(tk.Tk):
             clear_face_highlights(True)
             face_count = len(self.source_faces)
             random_index = randint(0, face_count - 1)
-            print(random_index)
             self.source_faces[random_index]["ButtonState"] = True
             higlight_selected_faces(random_index)
 
@@ -2610,6 +2609,7 @@ class GUI(tk.Tk):
             # Reselect Source images
             self.select_input_faces(auto_swap_state, '')
             self.toggle_swapper(True)
+
         except Exception as e:
             print(f"Exception in auto_swap: {e}")
             pass
@@ -2622,14 +2622,12 @@ class GUI(tk.Tk):
         self.clear_faces()
 
         if media_type == 'Video':
-            self.add_action("play_video", "stop")
             self.add_action("load_target_video", media_file)
             self.media_file_name = os.path.splitext(os.path.basename(media_file))
             self.video_slider.set(0)
             self.video_loaded = True
 
         elif media_type == 'Image':
-            self.add_action("play_video", "stop")
             self.add_action("load_target_image", media_file)
             self.media_file_name = os.path.splitext(os.path.basename(media_file))
             self.image_loaded = True
@@ -2640,6 +2638,7 @@ class GUI(tk.Tk):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
         if auto_swap_state != "off":
             self.add_action('function', "gui.auto_swap()")
+            self.toggle_play_video("play")
 
         for i in range(len(self.target_media_buttons)):
             self.target_media_buttons[i].config(style.media_button_off_3)

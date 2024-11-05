@@ -385,36 +385,35 @@ class VideoManager():
                         temp[0] = self.enhance_video(temp[0], self.current_frame, marker)  # temp = RGB
 
                     self.r_frame_q.append(temp)
-                    return  # Early exit if successful
 
             except Exception as e:
                 print(f"Failed to get frame from OpenCV, trying PIL: {e}")
 
-            # If we reach this point, OpenCV failed, try using PIL
-            try:
-                self.capture.seek(self.current_frame)  # Move to the current frame
-                target_image = self.capture.convert('RGB')  # Ensure it's in RGB mode
-                target_image = np.array(target_image)  # Convert to NumPy array
+                # If we reach this point, OpenCV failed, try using PIL
+                try:
+                    self.capture.seek(self.current_frame)  # Move to the current frame
+                    target_image = self.capture.convert('RGB')  # Ensure it's in RGB mode
+                    target_image = np.array(target_image)  # Convert to NumPy array
 
-                # Process the frame with PIL
-                if self.parameters['LandmarksPositionAdjSwitch'] and apply_landmarks and self.face_landmarks:
-                    self.face_landmarks.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+                    # Process the frame with PIL
+                    if self.parameters['LandmarksPositionAdjSwitch'] and apply_landmarks and self.face_landmarks:
+                        self.face_landmarks.apply_changes_to_widget_and_parameters(self.current_frame, 1)
 
-                if apply_landmarks and self.face_editor:
-                    self.face_editor.apply_changes_to_widget_and_parameters(self.current_frame, 1)
+                    if apply_landmarks and self.face_editor:
+                        self.face_editor.apply_changes_to_widget_and_parameters(self.current_frame, 1)
 
-                if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
-                    temp = [target_image, self.current_frame]  # temp = RGB
-                else:
-                    temp = [self.swap_video(target_image, self.current_frame, False), self.current_frame]  # temp = RGB
+                    if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
+                        temp = [target_image, self.current_frame]  # temp = RGB
+                    else:
+                        temp = [self.swap_video(target_image, self.current_frame, False), self.current_frame]  # temp = RGB
 
-                if self.control['EnhanceFrameButton']:
-                    temp[0] = self.enhance_video(temp[0], self.current_frame, False)  # temp = RGB
+                    if self.control['EnhanceFrameButton']:
+                        temp[0] = self.enhance_video(temp[0], self.current_frame, False)  # temp = RGB
 
-                self.r_frame_q.append(temp)
+                    self.r_frame_q.append(temp)
 
-            except Exception as e:
-                print(f"Failed to get frame from PIL: {e}")
+                except Exception as e:
+                    print(f"Failed to get frame from PIL: {e}")
 
         elif self.is_image_loaded:
             if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
