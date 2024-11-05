@@ -2281,19 +2281,19 @@ class GUI(tk.Tk):
         except:
             modifier = event
 
-        def clear_faces():
+        def clear_face_highlights(should_clear_button_state):
             for face in self.source_faces:
                 face["TKButton"].config(style.media_button_off_3)
 
                 # and also clear the states if not selecting multiples
-                if modifier == 'none' or modifier == 'random':
+                if should_clear_button_state:
                     face["ButtonState"] = False
 
         # If autoswap isnt on
         # Clear all the highlights. Clear all states, excpet if a modifier is being used
         # Start by turning off all the highlights on the input faces buttons
         if modifier != 'same' and modifier != 'random':
-            clear_faces()
+            clear_face_highlights(modifier == 'none')
 
             # Toggle the state of the selected Input Face
             if modifier != 'merge':
@@ -2327,7 +2327,7 @@ class GUI(tk.Tk):
             higlight_selected_faces(button)
 
         if modifier == 'random':
-            clear_faces()
+            clear_face_highlights(True)
             face_count = len(self.source_faces)
             random_index = randint(0, face_count - 1)
             print(random_index)
