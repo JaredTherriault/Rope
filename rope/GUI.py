@@ -31,7 +31,7 @@ from os.path import isfile, join
 import inspect #print(inspect.currentframe().f_back.f_code.co_name, 'resize_image')
 import platform
 from platform import system
-from rope.Dicts import CAMERA_BACKENDS
+from rope.Dicts import CAMERA_BACKENDS, DEFAULT_DATA
 from rope.FaceLandmarks import FaceLandmarks
 from rope.FaceEditor import FaceEditor
 from rope.Hovertip import RopeHovertip
@@ -2605,6 +2605,16 @@ class GUI(tk.Tk):
                 self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
 
             self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
+
+    def toggle_auto_swap(self):
+        auto_swap_state = self.widget['AutoSwapTextSel'].get()
+        modes = DEFAULT_DATA["AutoSwapTextSelModes"]
+
+        if auto_swap_state in modes:
+            index = modes.index(auto_swap_state) + 1
+            if index > len(modes) - 1:
+                index = 0
+            self.widget['AutoSwapTextSel'].set(modes[index])
 
     def auto_swap(self):
         # Reselect Target Image
