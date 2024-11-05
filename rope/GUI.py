@@ -2324,7 +2324,8 @@ class GUI(tk.Tk):
 
         # set all source face buttons to off (unless locked)
         for i in range(len(self.source_faces)):
-            if not self.source_faces[i]["LockedButtonState"]:
+            face_locked = "LockedButtonState" in self.source_faces[i] and self.source_faces[i]["LockedButtonState"] == True
+            if not face_locked:
                 self.source_faces[i]["ButtonState"] = False
                 self.source_faces[i]["TKButton"].config(style.media_button_off_3)
             else:
@@ -2334,7 +2335,7 @@ class GUI(tk.Tk):
         for i in range(len(self.target_faces[button]["SourceFaceAssignments"])):
             self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["ButtonState"] = True
 
-            is_locked = self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["LockedButtonState"] == True
+            is_locked = "LockedButtonState" in self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]] and self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["LockedButtonState"] == True
             button_style = style.media_button_on_lock_3 if is_locked else style.media_button_on_3
 
             self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["TKButton"].config(button_style)
@@ -2344,9 +2345,10 @@ class GUI(tk.Tk):
         def higlight_selected_faces(button_index):
             # Highlight all of input faces buttons that have a true state
             for face in self.source_faces:
-                if face["ButtonState"] or face["LockedButtonState"]:
+                face_locked = "LockedButtonState" in face and face["LockedButtonState"] == True
+                if face["ButtonState"] or face_locked:
                     
-                    if face["LockedButtonState"] == True:
+                    if face_locked:
                         face["TKButton"].config(style.media_button_on_lock_3)
                     else:
                         face["TKButton"].config(style.media_button_on_3)
@@ -2392,7 +2394,9 @@ class GUI(tk.Tk):
 
             # Toggle the state of the selected Input Face
             if modifier != 'merge':
-                if not self.source_faces[button]["LockedButtonState"]:
+                face_locked = "LockedButtonState" in self.source_faces[button] and self.source_faces[button]["LockedButtonState"] == True
+
+                if not face_locked:
                     self.source_faces[button]["ButtonState"] = not self.source_faces[button]["ButtonState"]
 
             # if shift find any other input faces and activate the state of all faces in between
@@ -2411,22 +2415,25 @@ class GUI(tk.Tk):
                             break
 
                 for i in range(button-1, self.shift_i_len-1, -1):
-                    if not self.source_faces[i]["LockedButtonState"] and self.source_faces[i]["ButtonState"]:
+                    face_locked = "LockedButtonState" in self.source_faces[i] and self.source_faces[i]["LockedButtonState"] == True
+                    if not face_locked and self.source_faces[i]["ButtonState"]:
                         for j in range(i, button, 1):
                             self.source_faces[j]["ButtonState"] = True
                         break
                 for i in range(button+1, len(self.source_faces), 1):
-                    if not self.source_faces[i]["LockedButtonState"] and self.source_faces[i]["ButtonState"]:
+                    face_locked = "LockedButtonState" in self.source_faces[i] and self.source_faces[i]["LockedButtonState"] == True
+                    if not face_locked and self.source_faces[i]["ButtonState"]:
                         for j in range(button, i, 1):
                             self.source_faces[j]["ButtonState"] = True
                         break
 
             if modifier == "alt":
-                self.source_faces[button]["LockedButtonState"] = not self.source_faces[button]["LockedButtonState"]
+                face_locked = "LockedButtonState" in self.source_faces[button] and self.source_faces[button]["LockedButtonState"] == True
+                self.source_faces[button]["LockedButtonState"] = not face_locked
                 self.source_faces[button]["ButtonState"] = self.source_faces[button]["LockedButtonState"]
                 
             higlight_selected_faces(button)
-
+            
         if modifier == 'random':
             clear_face_highlights(True)
             face_count = len(self.source_faces)
@@ -2446,7 +2453,8 @@ class GUI(tk.Tk):
                 for j in range(len(self.source_faces)):
 
                     # If the source face is active
-                    if self.source_faces[j]["ButtonState"] or self.source_faces[j]["LockedButtonState"]:
+                    face_locked = "LockedButtonState" in self.source_faces[j] and self.source_faces[j]["LockedButtonState"] == True
+                    if self.source_faces[j]["ButtonState"] or face_locked:
                         tface["SourceFaceAssignments"].append(j)
                         # Only append embedding if it is not a DFL model
                         if not self.source_faces[j]['DFLModel']:
