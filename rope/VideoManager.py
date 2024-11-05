@@ -354,7 +354,9 @@ class VideoManager():
     def get_requested_video_frame(self, frame, marker=True):
         temp = []
         if self.is_video_loaded:
+            was_playing = False
             if self.play:
+                was_playing = True
                 self.play_video("stop")
                 self.process_qs = []
 
@@ -414,6 +416,9 @@ class VideoManager():
 
                 except Exception as e:
                     print(f"Failed to get frame from PIL: {e}")
+
+            if was_playing:
+                self.play_video("play")
 
         elif self.is_image_loaded:
             if not self.control['SwapFacesButton'] and not self.control['EditFacesButton']:
