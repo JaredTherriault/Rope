@@ -20,7 +20,6 @@ DEFAULT_DATA = {
 'AudioInfoText':             'ENABLE REAL-TIME AUDIO:\nAdds audio from the input video during preview playback. If you are unable to maintain the input video frame rate, the audio will lag.',
 'AudioState':               False,
 'AudioText':                'Enable Audio',
-'AutoSwapState':            False,
 'ClearFacesDisplay':        'text',
 'ClearFacesIcon':            './rope/media/tarfacedel.png',
 'ClearFacesIconHover':      './rope/media/rec.png',
@@ -117,6 +116,12 @@ DEFAULT_DATA = {
 'RecordIconOn':             './rope/media/rec_on.png',
 'RecordInfoText':             'RECORD:\nArms the PLAY button for recording. Press RECORD, then PLAY to record. Press PLAY again to stop recording.',
 'RecordState':              False,
+'LoopDisplay':            'icon',
+'LoopIconHover':          './rope/media/loop_hover.png',
+'LoopIconOff':            './rope/media/loop_off.png',
+'LoopIconOn':             './rope/media/loop_on.png',
+'LoopInfoText':             'LOOP:\nRestarts the video from the beginning instead of stopping when the timeline reaches the end for continuous playback.',
+'LoopState':              False,
 'SaveImageState':           False,
 'SaveParamsButtonDisplay':           'text',
 'SaveParamsButtonInfoText':             'SAVE PARAMETERS:\nSaves all parameters in this column.',
@@ -165,10 +170,9 @@ DEFAULT_DATA = {
 'SaveImageButtonState':                     False,
 'SaveImageButtonText':             'Save Image',
 
-'AutoSwapButtonDisplay':                   'text',
-'AutoSwapButtonInfoText':                  'AUTOSWAP:\nAutomatcially applies your currently selected Input Face to new images.',
-'AutoSwapButtonState':                     False,
-'AutoSwapButtonText':             'Auto Swap',
+'AutoSwapTextSelInfoText':        'AUTOSWAP:\nAutomatcially applies your currently selected Input Face to new images.\nSAME: Use the same input faces\nRANDOM: Randomize input faces (locked faces not affected)',
+'AutoSwapTextSelMode':            'off',
+'AutoSwapTextSelModes':           ['off', 'same', 'random'],
 
 'ClearVramButtonDisplay':                   'text',
 'ClearVramButtonInfoText':                  'CLEAR VRAM:\nClears models from your VRAM.',
@@ -248,6 +252,9 @@ DEFAULT_DATA = {
 
 'VirtualCameraSwitchState':         False,
 'VirtualCameraSwitchInfoText':      'VIRTUAL CAMERA:\nFeed the swapped video output to virtual camera for using in external applications',
+
+'ResolutionOverrideSwitchState':    False,
+'ResolutionOverrideSwitchInfoText': 'OVERRIDE RESOLUTION:\nPlayback and recording will be downsampled to the specified height while maintaining aspect ratio. May help performance. Does not upsample.',
 
 'RestoreEyesSwitchInfoText':        'RESTORE EYES: \nRestore eyes from the original face',
 'RestoreEyesSwitchState':           False,
@@ -610,6 +617,11 @@ DEFAULT_DATA = {
 'OrientSliderInfoText':             'ORIENTATION ANGLE:\nSet this to the angle of the input face angle to help with laying down/upside down/etc. Angles are read clockwise.',
 'OrientSliderMax':                  270,
 'OrientSliderMin':                  0,
+'HeightOverrideSliderAmount':       480,
+'HeightOverrideSliderInc':          60,
+'HeightOverrideSliderInfoText':     'HEIGHT:\nSpecifies a height at which the video should be downsampled in playback and recording.',
+'HeightOverrideSliderMax':          2160,
+'HeightOverrideSliderMin':          120,
 'RestorerSliderAmount':             100,
 'RestorerSliderInc':                5,
 'RestorerSliderInfoText':           'RESTORER AMOUNT:\nBlends the Restored results back into the original swap.',
@@ -791,6 +803,17 @@ DEFAULT_DATA = {
 'SwapperTypeTextSelMode':          '128',
 'SwapperTypeTextSelModes':         ['128', '256', '512'],
 
+# Frame skip
+'FrameSkipModeTextSelInfoText':    'FRAME SKIP MODE:\nAllow video playback to skip frames. Does not affect recording.\nMANUAL: Set a constant skip rate.\nAUTO: Allow Rope to set the number of frames to skip based on the video playback speed, trying to maintain the original timing.',
+'FrameSkipModeTextSelMode':        'none',
+'FrameSkipModeTextSelModes':       ['none', 'manual', 'auto'],
+
+'FramesToSkipInfoText':     'FRAMES TO SKIP (MANUAL): How many frames to explicitly skip when set to "manual". Has no effect otherwise.',
+'FramesToSkipAmount':       1,
+'FramesToSkipInc':       1,
+'FramesToSkipMin':       1,
+'FramesToSkipMax':       10,
+#
 # Text Entry
 'CLIPTextEntry':    '',
 'CLIPTextEntryInfoText':            'TEXT MASKING ENTRY:\nTo use, type a word(s) in the box separated by commas and press <enter>.',
@@ -938,7 +961,6 @@ PARAMS =   {
     'ClearmemFunction':         'self.clear_mem()',
     'PerfTestFunction':         'self.toggle_perf_test()',
     'ImgVidFunction':         'self.toggle_vid_img()',
-    'AutoSwapFunction':         'self.toggle_auto_swap()',
     'SaveImageFunction':         'self.save_image()',
 
     'ClearmemIcon':            './rope/media/clear_mem.png',
@@ -966,7 +988,6 @@ PARAMS =   {
 
     'ImgVidMessage':         'IMAGE/VIDEO - Toggle between Image and Video folder view.',
     'ToggleStopMessage':         'STOP MARKER - Sets a frame that will stop the video playing/recording.',
-    'AutoSwapMessage':         'AUTO SWAP - Automatically swaps the first person in an image to the selcted source faces [LB: Turn on/off]',
     'SaveImageMessage':         'SAVE IMAGE - Save image to output folder',
     'ClearmemMessage':         'CLEAR VRAM - Clears all models from VRAM [LB: Clear]',
     'PerfTestMessage':         'PERFORMANCE DATA - Displays timing data in the console for critical Rope functions. [LB: on/off]',

@@ -4,7 +4,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog, font
 import numpy as np
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageSequence
 import json
 import time
 import copy
@@ -16,7 +16,7 @@ import customtkinter as ctk
 torchvision.disable_beta_transforms_warning()
 import mimetypes
 import webbrowser
-from random import random
+from random import random, randint
 
 import rope.GUIElements as GE
 import rope.Styles as style
@@ -24,6 +24,7 @@ import rope.Styles as style
 from skimage import transform as trans
 from torchvision.transforms import v2
 from tkinter import messagebox
+from multiprocessing import Pool, Manager
 
 from os import listdir
 from os.path import isfile, join
@@ -33,14 +34,41 @@ from platform import system
 from rope.Dicts import CAMERA_BACKENDS
 from rope.FaceLandmarks import FaceLandmarks
 from rope.FaceEditor import FaceEditor
+from rope.Hovertip import RopeHovertip
 import gc
+
+def process_video(file):
+    try:
+        video = cv2.VideoCapture(file)
+        if video.isOpened():
+            video.set(cv2.CAP_PROP_POS_FRAMES, int(video.get(cv2.CAP_PROP_FRAME_COUNT) / 2))
+            success, video_frame = video.read()
+
+            if success:
+                video_frame = cv2.cvtColor(video_frame, cv2.COLOR_BGR2RGB)
+                ratio = float(video_frame.shape[0]) / video_frame.shape[1]
+                new_height = 100
+                new_width = int(new_height / ratio)
+                video_frame = cv2.resize(video_frame, (new_width, new_height))
+                return [video_frame, file]
+            else:
+                print('Trouble reading file:', file)
+        else:
+            print('Trouble opening file:', file)
+    except Exception as e:
+        print('Error processing file:', file, e)
+    finally:
+        video.release()
+
+    return None
 
 class GUI(tk.Tk):
     def __init__(self, models):
         super().__init__()
 
         self.models = models
-        self.title('Rope-Next-00')
+        self.title_text = 'Rope-Next-00'
+        self.title(self.title_text)
         self.target_media = []
         self.target_video_file = []
         self.action_q = []
@@ -145,6 +173,7 @@ class GUI(tk.Tk):
                     "Nudge Right 30 Frames": "d",
                     "Record": "r",
                     "Play": "space",
+                    "Loop": "l",
                     "Save Image": "ctrl+s",
                     "Add Marker": "f",
                     "Delete Marker": "alt+f",
@@ -162,6 +191,7 @@ class GUI(tk.Tk):
                     "Toggle Face Adjustments": "9",
                     "Clear VRAM": "F1",
                     "Swap Faces": "s",
+                    "Toggle Auto Swap": "ctrl+a",
                     "Nudge Left 1 Frame": "c",
                     "Nudge Right 1 Frame": "v",
                     "Show Mask": "x",
@@ -180,6 +210,7 @@ class GUI(tk.Tk):
             shortcuts["Record"]: lambda: self.toggle_rec_video(),
             shortcuts["Play"]: lambda: self.toggle_play_video(),
             shortcuts["Nudge Right 30 Frames"]: lambda: self.preview_control('d'),
+            shortcuts["Loop"]: lambda: self.toggle_loop_video(),
             shortcuts["Save Image"]: lambda: self.save_image(),
             shortcuts["Add Marker"]: lambda: self.update_marker('add'),
             shortcuts["Delete Marker"]: lambda: self.update_marker('delete'),
@@ -197,12 +228,20 @@ class GUI(tk.Tk):
             shortcuts["Toggle Face Adjustments"]: lambda: self.toggle_and_update('FaceAdj', 'Input Face Adjustments'),
             shortcuts["Clear VRAM"]: lambda: self.clear_mem(),
             shortcuts["Swap Faces"]: lambda: self.toggle_swapper(),
+            shortcuts["Toggle Auto Swap"]: lambda: self.toggle_auto_swap(),
             shortcuts["Nudge Left 1 Frame"]: lambda:self.back_one_frame(),
             shortcuts["Nudge Right 1 Frame"]: lambda: self.forward_one_frame(),
             shortcuts["Show Mask"]: lambda: self.toggle_maskview(),
         }
         self.bind('<Key>', self.handle_key_press)
         self.bind("<Return>", lambda event: self.focus_set())
+
+
+    @staticmethod
+    def bind_scroll_events(widget, callback):
+        widget.bind("<MouseWheel>",lambda event: callback(event, delta=-int(event.delta / 120))) # Windows
+        widget.bind("<Button-4>", lambda event: callback(event, delta=-1)) # Unix
+        widget.bind("<Button-5>", lambda event: callback(event, delta=1)) # Unix
 
     def handle_key_press(self, event):
         if isinstance(self.focus_get(), tk.Entry):
@@ -389,6 +428,7 @@ class GUI(tk.Tk):
                     "Toggle Face Adjustments": "9",
                     "Clear VRAM": "F1",
                     "Swap Faces": "s",
+                    "Toggle Auto Swap": "ctrl+a",
                     "Nudge Left 1 Frame": "c",
                     "Nudge Right 1 Frame": "v",
                     "Show Mask": "x",
@@ -406,6 +446,7 @@ class GUI(tk.Tk):
                 shortcuts["Record"]: lambda: self.toggle_rec_video(),
                 shortcuts["Play"]: lambda: self.toggle_play_video(),
                 shortcuts["Nudge Right 30 Frames"]: lambda: self.preview_control('d'),
+                shortcuts["Loop"]: lambda: self.toggle_loop_video(),
                 shortcuts["Save Image"]: lambda: self.save_image(),
                 shortcuts["Add Marker"]: lambda: self.update_marker('add'),
                 shortcuts["Delete Marker"]: lambda: self.update_marker('delete'),
@@ -422,6 +463,7 @@ class GUI(tk.Tk):
                 shortcuts["Toggle Face Adjustments"]: lambda: self.toggle_and_update('FaceAdj', 'Input Face Adjustments'),
                 shortcuts["Clear VRAM"]: lambda: self.clear_mem(),
                 shortcuts["Swap Faces"]: lambda: self.toggle_swapper(),
+                shortcuts["Toggle Auto Swap"]: lambda: self.toggle_auto_swap(),
                 shortcuts["Nudge Left 1 Frame"]: lambda:self.back_one_frame(),
                 shortcuts["Nudge Right 1 Frame"]: lambda: self.forward_one_frame(),
                 shortcuts["Show Mask"]: lambda: self.toggle_maskview(),
@@ -798,8 +840,8 @@ class GUI(tk.Tk):
         # Input Videos Canvas
         self.target_media_canvas = tk.Canvas(self.layer['InputVideoFrame'], style.canvas_frame_label_3, height=100, width=195)
         self.target_media_canvas.grid(row=1, column=0, sticky='NEWS', padx=10, pady=10)
-        self.target_media_canvas.bind("<MouseWheel>", self.target_videos_mouse_wheel)
         self.target_media_canvas.create_text(8, 20, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Input Videos")
+        self.bind_scroll_events(self.target_media_canvas, self.target_videos_mouse_wheel)
 
         # Scroll Canvas
         scroll_canvas = tk.Canvas(self.layer['InputVideoFrame'], style.canvas_frame_label_3, bd=0, )
@@ -821,7 +863,9 @@ class GUI(tk.Tk):
         # Scroll Canvas
         self.source_faces_canvas = tk.Canvas(self.layer['InputVideoFrame'], style.canvas_frame_label_3, height = 100, width=195)
         self.source_faces_canvas.grid(row=1, column=2, sticky='NEWS', padx=10, pady=10)
-        self.source_faces_canvas.bind("<MouseWheel>", self.source_faces_mouse_wheel)
+
+        self.bind_scroll_events(self.source_faces_canvas, self.source_faces_mouse_wheel)
+
         self.source_faces_canvas.create_text(8, 20, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Input Faces")
 
         scroll_canvas = tk.Canvas(self.layer['InputVideoFrame'], style.canvas_frame_label_3, bd=0, )
@@ -881,7 +925,7 @@ class GUI(tk.Tk):
       # Preview Window
         self.video = tk.Label(self.layer['preview_column'], bg='black')
         self.video.grid(row=1, column=0, sticky='NEWS', padx=0, pady=0)
-        self.video.bind("<MouseWheel>", self.iterate_through_merged_embeddings)
+        self.bind_scroll_events(self.video, self.iterate_through_merged_embeddings)
         self.video.bind("<ButtonRelease-1>", lambda event: self.toggle_play_video())
 
     # Videos
@@ -908,9 +952,8 @@ class GUI(tk.Tk):
         self.layer['preview_frame'].grid_rowconfigure(1, weight=0)
 
         # Left Side
-        self.layer['play_controls_left'] = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, width=100 )
+        self.layer['play_controls_left'] = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, width=200 )
         self.layer['play_controls_left'].grid(row=0, column=0, sticky='NEWS', pady=0)
-        self.widget['SaveImageButton'] = GE.Button(self.layer['play_controls_left'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=5, width=100)
 
         # Center
         cente_frame = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, )
@@ -918,7 +961,7 @@ class GUI(tk.Tk):
         cente_frame.grid_columnconfigure(0, weight=0)
         cente_frame.grid_rowconfigure(0, weight=0)
 
-        play_control_frame = tk.Frame(cente_frame, style.canvas_frame_label_2, height=30, width=270  )
+        play_control_frame = tk.Frame(cente_frame, style.canvas_frame_label_2, height=30, width=300  )
         play_control_frame.place(anchor="c", relx=.5, rely=.5)
 
         column = 0
@@ -932,6 +975,8 @@ class GUI(tk.Tk):
         self.widget['TLPlayButton'] = GE.Button(play_control_frame, 'Play', 2, self.toggle_play_video, None, 'control', x=column , y=2, width=20)
         column += col_delta
         self.widget['TLRightButton'] = GE.Button(play_control_frame, 'TLRight', 2, self.preview_control, 'd', 'control', x=column , y=2, width=20)
+        column += col_delta
+        self.widget['TLLoopButton'] = GE.Button(play_control_frame, 'Loop', 2, self.toggle_loop_video, None, 'control', x=column , y=2, width=20)
 
         # Right Side
         right_playframe = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, width=120)
@@ -943,13 +988,17 @@ class GUI(tk.Tk):
         # self.widget['StopMarkerButton'] = GE.Button(right_playframe, 'StopMarkerButton', 2, self.update_marker, 'stop', 'control', x=100, y=5, width=20)
         self.widget['SaveMarkerButton'] = GE.Button(right_playframe, 'SaveMarkerButton', 2, self.save_markers_json, None, 'control', x=95, y=5, width=20)
 
-    # Images
-        self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
-        self.layer['image_controls'].grid(row=2, column=0, rowspan=2, sticky='NEWS', pady=0)
-        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=5, width=100)
-        self.widget['AutoSwapButton'] = GE.Button(self.layer['image_controls'], 'AutoSwapButton', 2, self.toggle_auto_swap, None, 'control', x=150, y=5, width=100)
+    # Image controls
+        self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=33)
+        self.layer['image_controls'].grid(row=5, column=0, sticky='NEWS', pady=0)
 
-        self.layer['image_controls'].grid_forget()
+        self.layer['image_controls_save_image_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, width=130, height=33)
+        self.layer['image_controls_save_image_frame'].grid(row=0, column=0, sticky='E', pady=0)
+        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls_save_image_frame'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=0, width=100, height=33)
+        
+        self.layer['image_controls_auto_swap_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, height=33)
+        self.layer['image_controls_auto_swap_frame'].grid(row=0, column=1, sticky='E', pady=0)
+        self.widget['AutoSwapTextSel'] = GE.TextSelection(self.layer['image_controls_auto_swap_frame'], 'AutoSwapTextSel', 'Auto Swap', 3, self.update_data, 'control', 'control', 220, 33, 0, 0, 0, 0, 0.72)
 
     # FaceLab
         self.layer['FaceLab_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
@@ -959,7 +1008,7 @@ class GUI(tk.Tk):
 
       # Found Faces
         ff_frame = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_1)
-        ff_frame.grid(row=5, column=0, sticky='NEWS', pady=1)
+        ff_frame.grid(row=6, column=0, sticky='NEWS', pady=1)
         ff_frame.grid_columnconfigure(0, weight=0)
         ff_frame.grid_columnconfigure(1, weight=1)
         ff_frame.grid_rowconfigure(0, weight=0)
@@ -977,14 +1026,14 @@ class GUI(tk.Tk):
         # Scroll Canvas
         self.found_faces_canvas = tk.Canvas(ff_frame, style.canvas_frame_label_3, height = 100 )
         self.found_faces_canvas.grid( row = 0, column = 1, sticky='NEWS')
-        self.found_faces_canvas.bind("<MouseWheel>", self.target_faces_mouse_wheel)
+        self.bind_scroll_events(self.found_faces_canvas, self.target_faces_mouse_wheel)
         self.found_faces_canvas.create_text(8, 45, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Found Faces")
 
         self.static_widget['23'] = GE.Separator_y(ff_frame, 111, 0)
 
       # Merged Faces
         mf_frame = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_1)
-        mf_frame.grid(row=6, column=0, sticky='NEWS', pady=0)
+        mf_frame.grid(row=7, column=0, sticky='NEWS', pady=0)
         mf_frame.grid_columnconfigure(0, minsize=10)
         mf_frame.grid_columnconfigure(1, weight=1)
         mf_frame.grid_rowconfigure(0, weight=0)
@@ -1006,7 +1055,7 @@ class GUI(tk.Tk):
         self.merged_faces_canvas = tk.Canvas(mf_frame, style.canvas_frame_label_3, height = 100)
         self.merged_faces_canvas.grid( row = 0, column = 1, sticky='NEWS')
         self.merged_faces_canvas.grid_rowconfigure(0, weight=1)
-        self.merged_faces_canvas.bind("<MouseWheel>", lambda event: self.merged_faces_canvas.xview_scroll(-int(event.delta/120.0), "units"))
+        self.bind_scroll_events(self.merged_faces_canvas, lambda event, delta: self.merged_faces_canvas.xview_scroll(delta, "units"))
         self.merged_faces_canvas.create_text(8, 45, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Merged Faces")
         self.static_widget['24'] = GE.Separator_y(mf_frame, 111, 0)
 
@@ -1042,10 +1091,11 @@ class GUI(tk.Tk):
         self.widget['DefaultParamsButton'] = GE.Button(frame, 'DefaultParamsButton', 2, self.parameter_io, 'default', 'control', x=0 , y=8, width=100)
 
         self.layer['parameters_canvas'] = tk.Canvas(self.layer['parameter_frame'], style.canvas_frame_label_3, bd=0, width=width)
-        self.layer['parameters_canvas'].grid(row=1, column=0, sticky='NEWS', pady=0, padx=0)
+        self.parameters_canvas = self.layer['parameters_canvas']
+        self.parameters_canvas.grid(row=1, column=0, sticky='NEWS', pady=0, padx=0)
 
         # Face Editor
-        tabview_main = ctk.CTkTabview(self.layer['parameters_canvas'], width=398, height=2050, corner_radius=6, border_width=1,
+        tabview_main = ctk.CTkTabview(self.parameters_canvas, width=398, height=2050, corner_radius=6, border_width=1,
                                       fg_color=style.main, border_color=style.main3,
                                       segmented_button_selected_hover_color='#b1b1b2',
                                       segmented_button_unselected_hover_color=style.main,
@@ -1057,7 +1107,7 @@ class GUI(tk.Tk):
         tabview_main.pack(fill='both', expand=True)  # Utilizza pack per gestire il layout all'interno del Canvas
 
         # Inserisci il CTkTabview nel Canvas usando create_window
-        self.layer['parameters_canvas'].create_window(0, 0, window=tabview_main, anchor='nw')
+        self.parameters_canvas.create_window(0, 0, window=tabview_main, anchor='nw')
 
         # Aggiungi Tabs al CTkTabview
         tab_face_swapper = tabview_main.add("Face Swapper  ")
@@ -1070,11 +1120,14 @@ class GUI(tk.Tk):
         self.layer['parameters_face_editor_frame'].grid(row=0, column=0, sticky='NEWS', pady=0, padx=0)
 
         self.layer['parameter_scroll_canvas'] = tk.Canvas(self.layer['parameter_frame'], style.canvas_frame_label_3, bd=0, )
-        self.layer['parameter_scroll_canvas'].grid(row=1, column=1, sticky='NEWS', pady=0)
-        self.layer['parameter_scroll_canvas'].grid_rowconfigure(0, weight=1)
-        self.layer['parameter_scroll_canvas'].grid_columnconfigure(0, weight=1)
+        parameter_scroll_canvas = self.layer['parameter_scroll_canvas']
+        parameter_scroll_canvas.grid(row=1, column=1, sticky='NEWS', pady=0)
+        parameter_scroll_canvas.grid_rowconfigure(0, weight=1)
+        parameter_scroll_canvas.grid_columnconfigure(0, weight=1)
 
-        self.static_widget['parameters_scrollbar'] = GE.Scrollbar_y(self.layer['parameter_scroll_canvas'], self.layer['parameters_canvas'])
+        self.static_widget['parameters_scrollbar'] = GE.Scrollbar_y(parameter_scroll_canvas, self.parameters_canvas)
+
+        self.bind_scroll_events(parameter_scroll_canvas, self.parameters_mouse_wheel)
 
         self.static_widget['30'] = GE.Separator_x(parameters_control_frame, 0, 41)
 
@@ -1115,6 +1168,18 @@ class GUI(tk.Tk):
         #Virtual Cam
         row = row + 1
         self.widget['VirtualCameraSwitch'] = GE.Switch2(self.layer['parameters_frame'], 'VirtualCameraSwitch', 'Send Frames to Virtual Camera', 3, self.toggle_virtualcam, 'control', 398, 20, row, 0, padx, pady)
+
+        # Resolution override
+        row = row + 1
+        self.widget['ResolutionOverrideSwitch'] = GE.Switch2(self.layer['parameters_frame'], 'ResolutionOverrideSwitch', 'Override Resolution', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady)
+        row = row + 1
+        self.widget['HeightOverrideSlider'] = GE.Slider2(self.layer['parameters_frame'], 'HeightOverrideSlider', 'Height', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+
+        # Frame Skip
+        row = row + 1
+        self.widget['FrameSkipModeTextSel'] = GE.TextSelection(self.layer['parameters_frame'], 'FrameSkipModeTextSel', 'Frame Skip Mode', 3, self.update_data, 'parameter', 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        row = row + 1
+        self.widget['FramesToSkip'] = GE.Slider2(self.layer['parameters_frame'], 'FramesToSkip', 'Frames to skip', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
 
         # Restore
         row = row + 1
@@ -1669,27 +1734,32 @@ class GUI(tk.Tk):
     def callback(self, url):
         webbrowser.open_new_tab(url)
 
-    def target_faces_mouse_wheel(self, event):
-        self.found_faces_canvas.xview_scroll(1*int(event.delta/120.0), "units")
+    def target_faces_mouse_wheel(self, event, delta = 0):
+        self.found_faces_canvas.xview_scroll(delta, "units")
 
-    def source_faces_mouse_wheel(self, event):
-        self.source_faces_canvas.yview_scroll(-int(event.delta/120.0), "units")
+    def source_faces_mouse_wheel(self, event, delta=0):
+        self.source_faces_canvas.yview_scroll(delta, "units")
 
         # Center of visible canvas as a percentage of the entire canvas
         center = (self.source_faces_canvas.yview()[1]-self.source_faces_canvas.yview()[0])/2
         center = center+self.source_faces_canvas.yview()[0]
         self.static_widget['input_faces_scrollbar'].set(center)
 
-    def target_videos_mouse_wheel(self, event):
-        self.target_media_canvas.yview_scroll(-int(event.delta/120.0), "units")
+    def target_videos_mouse_wheel(self, event, delta = 0):
+        self.target_media_canvas.yview_scroll(delta, "units")
 
         # Center of visible canvas as a percentage of the entire canvas
         center = (self.target_media_canvas.yview()[1]-self.target_media_canvas.yview()[0])/2
         center = center+self.target_media_canvas.yview()[0]
         self.static_widget['input_videos_scrollbar'].set(center)
 
-    def parameters_mouse_wheel(self, event):
-        self.canvas.yview_scroll(1*int(event.delta/120.0), "units")
+    def parameters_mouse_wheel(self, event, delta = 0):
+        self.parameters_canvas.yview_scroll(delta, "units")
+
+        # Center of visible canvas as a percentage of the entire canvas
+        center = (self.parameters_canvas.yview()[1]-self.parameters_canvas.yview()[0])/2
+        center = center+self.parameters_canvas.yview()[0]
+        self.static_widget['parameters_scrollbar'].set(center)
 
     # focus_get()
     # def preview_control(self, event):
@@ -1770,6 +1840,7 @@ class GUI(tk.Tk):
             if event == ' ':
                 self.toggle_play_video()
             elif event == 'w':
+                self.add_action("play_video", "stop")
                 frame += 1
                 if frame > video_length:
                     frame = video_length
@@ -1777,6 +1848,7 @@ class GUI(tk.Tk):
                 self.add_action("get_requested_video_frame", frame)
                 # self.parameter_update_from_marker(frame)
             elif event == 's':
+                self.add_action("play_video", "stop")
                 frame -= 1
                 if frame < 0:
                     frame = 0
@@ -1784,6 +1856,7 @@ class GUI(tk.Tk):
                 self.add_action("get_requested_video_frame", frame)
                 # self.parameter_update_from_marker(frame)
             elif event == 'd':
+                self.add_action("play_video", "stop")
                 frame += 30
                 if frame > video_length:
                     frame = video_length
@@ -1791,6 +1864,7 @@ class GUI(tk.Tk):
                 self.add_action("get_requested_video_frame", frame)
                 # self.parameter_update_from_marker(frame)
             elif event == 'a':
+                self.add_action("play_video", "stop")
                 frame -= 30
                 if frame < 0:
                     frame = 0
@@ -1798,6 +1872,7 @@ class GUI(tk.Tk):
                 self.add_action("get_requested_video_frame", frame)
                 # self.parameter_update_from_marker(frame)
             elif event == 'q':
+                self.add_action("play_video", "stop")
                 frame = 0
                 self.video_slider.set(frame)
                 self.add_action("get_requested_video_frame", frame)
@@ -2022,7 +2097,7 @@ class GUI(tk.Tk):
             new_source_face["TKButton"] = tk.Button(self.merged_faces_canvas, style.media_button_off_3, image=self.blank, text=button_text, height=14, width=text_width, compound='left', anchor='w')
 
             new_source_face["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=j: self.select_input_faces(event, arg))
-            new_source_face["TKButton"].bind("<MouseWheel>", lambda event: self.merged_faces_canvas.xview_scroll(-int(event.delta/120.0), "units"))
+            self.bind_scroll_events(new_source_face["TKButton"], lambda event, delta: self.merged_faces_canvas.xview_scroll(delta, "units"))
             new_source_face['TextWidth'] = text_width
             x_width = 20
             if len(self.source_faces)>0:
@@ -2072,7 +2147,7 @@ class GUI(tk.Tk):
                 new_source_face["TKButton"] = tk.Button(self.merged_faces_canvas, style.media_button_off_3, image=self.blank, text=temp0[j][0], height=14, width=text_width, compound='left', anchor='w')
 
                 new_source_face["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=j: self.select_input_faces(event, arg))
-                new_source_face["TKButton"].bind("<MouseWheel>", lambda event: self.merged_faces_canvas.xview_scroll(-int(event.delta/120.0), "units"))
+                self.bind_scroll_events(new_source_face["TKButton"], lambda event, delta: self.merged_faces_canvas.xview_scroll(delta, "units"))
                 new_source_face['TextWidth'] = text_width
                 x_width = 20
                 if len(self.source_faces)>0:
@@ -2093,7 +2168,9 @@ class GUI(tk.Tk):
 
         # Next Load images
         directory = self.json_dict["source faces"]
-        filenames = [os.path.join(dirpath,f) for (dirpath, dirnames, filenames) in os.walk(directory) for f in filenames]
+        filenames = [os.path.join(dirpath,f) for (dirpath, dirnames, filenames) in os.walk(directory, followlinks=True) for f in filenames]
+
+        filenames = sorted(filenames, key=str.lower)
 
         # torch.cuda.memory._record_memory_history(True, trace_alloc_max_entries=100000, trace_alloc_record_context=True)
         i=0
@@ -2139,22 +2216,22 @@ class GUI(tk.Tk):
                         else:
                             face_emb, cropped_image = self.models.run_recognize(img, kpss_5, self.parameters["SimilarityTypeTextSel"], self.parameters['FaceSwapperModelTextSel'])
                             crop = cv2.cvtColor(cropped_image.cpu().numpy(), cv2.COLOR_BGR2RGB)
-                            crop = cv2.resize(crop, (85, 85))
+                            crop = cv2.resize(crop, (50, 50))
 
                             new_source_face = self.source_face.copy()
                             self.source_faces.append(new_source_face)
 
                             self.source_faces[-1]["Image"] = ImageTk.PhotoImage(image=Image.fromarray(crop))
                             self.source_faces[-1]["Embedding"] = face_emb
-                            self.source_faces[-1]["TKButton"] = tk.Button(self.source_faces_canvas, style.media_button_off_3, image=self.source_faces[-1]["Image"], height=90, width=90)
+                            self.source_faces[-1]["TKButton"] = tk.Button(self.source_faces_canvas, style.media_button_off_3, image=self.source_faces[-1]["Image"], height=55, width=55)
                             self.source_faces[-1]["ButtonState"] = False
                             self.source_faces[-1]["LockedButtonState"] = False
                             self.source_faces[-1]["file"] = file
 
                             self.source_faces[-1]["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))
-                            self.source_faces[-1]["TKButton"].bind("<MouseWheel>", self.source_faces_mouse_wheel)
+                            self.bind_scroll_events(self.source_faces[-1]["TKButton"], self.source_faces_mouse_wheel)
 
-                            self.source_faces_canvas.create_window((i % 2) * 100, (i // 2) * 100, window=self.source_faces[-1]["TKButton"], anchor='nw')
+                            self.source_faces_canvas.create_window((i % 3) * 65, (i // 3) * 65, window=self.source_faces[-1]["TKButton"], anchor='nw')
 
                             self.static_widget['input_faces_scrollbar'].resize_scrollbar(None)
                             i = i + 1
@@ -2167,6 +2244,11 @@ class GUI(tk.Tk):
     def find_faces(self):
         try:
             img = torch.from_numpy(self.video_image).to(self.models.device)
+
+            # Discard Alpha channel if it exists
+            if img.shape[2] == 4:
+                img = img[:, :, :3] 
+
             img = img.permute(2,0,1)
             if self.parameters["AutoRotationSwitch"]:
                 rotation_angles = [0, 90, 180, 270]
@@ -2179,9 +2261,9 @@ class GUI(tk.Tk):
                 face_emb, cropped_img = self.models.run_recognize(img, face_kps, self.parameters["SimilarityTypeTextSel"], self.parameters['FaceSwapperModelTextSel'])
                 ret.append([face_kps, face_emb, cropped_img])
 
-        except Exception:
-            messagebox.showinfo('No Media', 'No media selected')
-            print(" No media selected")
+        except Exception as e:
+            messagebox.showinfo('No Media', 'No appropriate media selected for find_faces method.')
+            print(f"No appropriate media selected for find_faces method: {e}")
 
         else:
             # Find all faces and add to target_faces[]
@@ -2211,7 +2293,7 @@ class GUI(tk.Tk):
                         last_index = len(self.target_faces)-1
 
                         self.target_faces[last_index]["TKButton"] = tk.Button(self.found_faces_canvas, style.media_button_off_3, height = 86, width = 86)
-                        self.target_faces[last_index]["TKButton"].bind("<MouseWheel>", self.target_faces_mouse_wheel)
+                        self.bind_scroll_events(self.target_faces[last_index]["TKButton"], self.target_faces_mouse_wheel)
                         self.target_faces[last_index]["ButtonState"] = False
                         self.target_faces[last_index]["Image"] = ImageTk.PhotoImage(image=Image.fromarray(crop))
                         self.target_faces[last_index]["Embedding"] = face[1]
@@ -2260,6 +2342,30 @@ class GUI(tk.Tk):
 
     def select_input_faces(self, event, button):
 
+        def higlight_selected_faces(button_index):
+            # Highlight all of input faces buttons that have a true state
+            for face in self.source_faces:
+                face_locked = "LockedButtonState" in face and face["LockedButtonState"] == True
+                if face["ButtonState"] or face_locked:
+                    
+                    if face_locked:
+                        face["TKButton"].config(style.media_button_on_lock_3)
+                    else:
+                        face["TKButton"].config(style.media_button_on_3)
+                        
+                    if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
+                        self.add_action("load_target_image", face["file"])
+                        self.image_loaded = True
+
+            if self.source_faces[button_index]['DFLModel']:
+                # Clear DFL models from memory
+                if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
+                    for model in list(self.models.dfl_models):
+                        if model!=self.source_faces[button_index]['DFLModel']:
+                            del self.models.dfl_models[model]._sess
+                            del self.models.dfl_models[model]
+                    gc.collect()
+
         try:
             if event.state & 0x4 != 0:
                 modifier = 'ctrl'
@@ -2272,17 +2378,19 @@ class GUI(tk.Tk):
         except:
             modifier = event
 
-        # If autoswap isnt on
-        # Clear all the highlights. Clear all states, excpet if a modifier is being used
-        # Start by turning off all the highlights on the input faces buttons
-        if modifier != 'auto':
+        def clear_face_highlights(should_clear_button_state):
             for face in self.source_faces:
                 face["TKButton"].config(style.media_button_off_3)
 
                 # and also clear the states if not selecting multiples
-                if modifier == 'none':
-                    if face["LockedButtonState"] == False:
-                        face["ButtonState"] = False
+                if should_clear_button_state:
+                    face["ButtonState"] = False
+
+        # If autoswap isnt on
+        # Clear all the highlights. Clear all states, excpet if a modifier is being used
+        # Start by turning off all the highlights on the input faces buttons
+        if modifier != 'same' and modifier != 'random':
+            clear_face_highlights(modifier == 'none')
 
             # Toggle the state of the selected Input Face
             if modifier != 'merge':
@@ -2323,29 +2431,15 @@ class GUI(tk.Tk):
                 face_locked = "LockedButtonState" in self.source_faces[button] and self.source_faces[button]["LockedButtonState"] == True
                 self.source_faces[button]["LockedButtonState"] = not face_locked
                 self.source_faces[button]["ButtonState"] = self.source_faces[button]["LockedButtonState"]
-
-            # Highlight all of input faces buttons that have a true state
-            for face in self.source_faces:
-                face_locked = "LockedButtonState" in face and face["LockedButtonState"] == True
-                if face["ButtonState"] or face_locked:
-
-                    if face_locked:
-                        face["TKButton"].config(style.media_button_on_lock_3)
-                    else:
-                        face["TKButton"].config(style.media_button_on_3)
-
-                    if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
-                        self.add_action("load_target_image", face["file"])
-                        self.image_loaded = True
-
-            if self.source_faces[button]['DFLModel']:
-                # Clear DFL models from memory
-                if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
-                    for model in list(self.models.dfl_models):
-                        if model!=self.source_faces[button]['DFLModel']:
-                            del self.models.dfl_models[model]._sess
-                            del self.models.dfl_models[model]
-                    gc.collect()
+                
+            higlight_selected_faces(button)
+            
+        if modifier == 'random':
+            clear_face_highlights(True)
+            face_count = len(self.source_faces)
+            random_index = randint(0, face_count - 1)
+            self.source_faces[random_index]["ButtonState"] = True
+            higlight_selected_faces(random_index)
 
         # Assign all active input faces to the active target face
         for tface in self.target_faces:
@@ -2418,9 +2512,12 @@ class GUI(tk.Tk):
 
         # Recursively read all media files from directory
         directory =  self.json_dict["source videos"]
-        filenames = [os.path.join(dirpath,f) for (dirpath, dirnames, filenames) in os.walk(directory) for f in filenames]
+        filenames = [os.path.join(dirpath,f) for (dirpath, dirnames, filenames) in os.walk(directory, followlinks=True) for f in filenames]
+
+        filenames = sorted(filenames, key=str.lower)
 
         images = []
+        video_files = []
         self.target_media = []
         self.target_media_buttons = []
         self.target_media_canvas.delete("all")
@@ -2434,11 +2531,26 @@ class GUI(tk.Tk):
             else:
                 # Its an image
                 if file_type == 'image':
+                    is_animated = False
                     try:
-                        image = cv2.imread(file)
-                        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    except:
-                        print('Trouble reading file:', file)
+                        try:
+                            image = cv2.imread(file)
+                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                        except:
+                            # Open with Pillow
+                            with Image.open(file) as img:
+
+                                frames = list(ImageSequence.Iterator(img))
+
+                                if len(frames) > 1:
+                                    is_animated = True
+
+                                # If it's an animated GIF, use the first frame
+                                img = img.convert('RGB')  # Ensure it has RGB mode
+                                image = np.array(img)
+
+                    except Exception as e:
+                        print(f"Trouble reading file '{file}': {e}")
                     else:
                         ratio = float(image.shape[0]) / image.shape[1]
 
@@ -2446,37 +2558,23 @@ class GUI(tk.Tk):
                         new_width = int(new_height / ratio)
                         image = cv2.resize(image, (new_width, new_height))
                         image[:new_height, :new_width, :] = image
-                        images.append([image, file])
+
+                        if is_animated:
+                            videos.append([image, file])
+                        else:
+                            images.append([image, file])
 
                 # Its a video
                 elif file_type == 'video':
-                    try:
-                        video = cv2.VideoCapture(file)
-                    except:
-                        print('Trouble reading file:', file)
-                    else:
-                        if video.isOpened():
+                    video_files.append(file)
 
-                            # Grab a frame from the middle for a thumbnail
-                            video.set(cv2.CAP_PROP_POS_FRAMES, int(video.get(cv2.CAP_PROP_FRAME_COUNT)/2))
-                            success, video_frame = video.read()
+        with Pool() as pool:
+            results = pool.map(process_video, video_files)
 
-                            if success:
-                                video_frame = cv2.cvtColor(video_frame, cv2.COLOR_BGR2RGB)
-                                ratio = float(video_frame.shape[0]) / video_frame.shape[1]
+        for result in results:
+            if result is not None:
+                videos.append(result)
 
-                                new_height = 100
-                                new_width = int(new_height / ratio)
-                                video_frame = cv2.resize(video_frame, (new_width, new_height))
-                                video_frame[:new_height, :new_width, :] = video_frame
-
-                                videos.append([video_frame, file])
-                                video.release()
-
-                            else:
-                                print('Trouble reading file:', file)
-                        else:
-                            print('Trouble opening file:', file)
         delx, dely = 100, 120
         if self.widget['PreviewModeTextSel'].get()== 'Image':#images
             for i in range(len(images)):
@@ -2485,7 +2583,7 @@ class GUI(tk.Tk):
                 rgb_video = Image.fromarray(images[i][0])
                 self.target_media.append(ImageTk.PhotoImage(image=rgb_video))
                 self.target_media_buttons[i].config( image = self.target_media[i],  command=lambda i=i: self.load_target(i, images[i][1], self.widget['PreviewModeTextSel'].get()))
-                self.target_media_buttons[i].bind("<MouseWheel>", self.target_videos_mouse_wheel)
+                self.bind_scroll_events(self.target_media_buttons[i], self.target_videos_mouse_wheel)
                 self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
 
             #self.target_media_canvas.configure(scrollregion = self.target_media_canvas.bbox("all"))
@@ -2498,10 +2596,11 @@ class GUI(tk.Tk):
                 self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(videos[i][0])))
 
                 filename = os.path.basename(videos[i][1])
+                hovertip = RopeHovertip(self.target_media_buttons[i], filename, x_offset=190)
                 if len(filename)>32:
                     filename = filename[:29]+'...'
 
-                self.target_media_buttons[i].bind("<MouseWheel>", self.target_videos_mouse_wheel)
+                self.bind_scroll_events(self.target_media_buttons[i], self.target_videos_mouse_wheel)
                 self.target_media_buttons[i].config(image = self.target_media[i], text=filename, compound='top', anchor='n',command=lambda i=i: self.load_target(i, videos[i][1], self.widget['PreviewModeTextSel'].get()))
                 self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
 
@@ -2509,20 +2608,20 @@ class GUI(tk.Tk):
 
     def auto_swap(self):
         # Reselect Target Image
+        auto_swap_state = self.widget['AutoSwapTextSel'].get()
         try:
             self.find_faces()
             self.target_faces[0]["ButtonState"] = True
             self.target_faces[0]["TKButton"].config(style.media_button_on_3)
 
             # Reselect Source images
-            self.select_input_faces('auto', '')
+            self.select_input_faces(auto_swap_state, '')
             self.toggle_swapper(True)
-        except:
+
+        except Exception as e:
+            print(f"Exception in auto_swap: {e}")
             pass
-
-    def toggle_auto_swap(self):
-        self.widget['AutoSwapButton'].toggle_button()
-
+              
     def load_target(self, button, media_file, media_type):
         # Make sure the video stops playing
         self.toggle_play_video('stop')
@@ -2531,9 +2630,9 @@ class GUI(tk.Tk):
         self.clear_faces()
 
         if media_type == 'Video':
-            self.video_slider.set(0)
             self.add_action("load_target_video", media_file)
             self.media_file_name = os.path.splitext(os.path.basename(media_file))
+            self.video_slider.set(0)
             self.video_loaded = True
 
         elif media_type == 'Image':
@@ -2541,9 +2640,13 @@ class GUI(tk.Tk):
             self.media_file_name = os.path.splitext(os.path.basename(media_file))
             self.image_loaded = True
 
-            # # find faces
-            if self.widget['AutoSwapButton'].get():
-                self.add_action('function', "gui.auto_swap()")
+        self.title(f"{self.title_text} - {os.path.basename(media_file)}")
+
+        # # find faces
+        auto_swap_state = self.widget['AutoSwapTextSel'].get()
+        if auto_swap_state != "off":
+            self.add_action('function', "gui.auto_swap()")
+            self.toggle_play_video("play")
 
         for i in range(len(self.target_media_buttons)):
             self.target_media_buttons[i].config(style.media_button_off_3)
@@ -2811,6 +2914,18 @@ class GUI(tk.Tk):
             else:
                 self.widget['TLRecButton'].disable_button()
 
+    def toggle_loop_video(self):
+
+        self.widget['TLLoopButton'].toggle_button()
+
+        if self.widget['TLLoopButton'].get():
+            self.widget['TLLoopButton'].enable_button()
+            self.add_action("play_video", "loop_on")
+
+        else:
+            self.widget['TLLoopButton'].disable_button()
+            self.add_action("play_video", "loop_off")
+
     # this makes no sense
     def add_action(self, action, parameter=None): #
         # print(inspect.currentframe().f_back.f_code.co_name, '->add_action: '+action)
@@ -2903,13 +3018,13 @@ class GUI(tk.Tk):
 
         self.load_input_faces()
 
-    def iterate_through_merged_embeddings(self, event):
-        if event.delta>0:
+    def iterate_through_merged_embeddings(self, event, delta):
+        if delta>0:
             for i in range(len(self.source_faces)):
                 if self.source_faces[i]["ButtonState"] and i<len(self.source_faces)-1:
                     self.select_input_faces('none', i+1)
                     break
-        elif event.delta<0:
+        elif delta<0:
             for i in range(len(self.source_faces)):
                 if self.source_faces[i]["ButtonState"]and i>0:
                     self.select_input_faces('none', i-1)
@@ -2925,7 +3040,6 @@ class GUI(tk.Tk):
         self.layer['slider_frame'].grid_forget()
         self.layer['preview_frame'].grid_forget()
         self.layer['markers_canvas'].grid_forget()
-        self.layer['image_controls'].grid_forget()
         self.layer['FaceLab_controls'].grid_forget()
         self.layer['InputVideoFrame'].grid_forget()
         self.layer['parameter_frame'].grid_forget()
@@ -2949,7 +3063,6 @@ class GUI(tk.Tk):
 
         elif self.widget['PreviewModeTextSel'].get()=='Image':
             self.video_loaded = False
-            self.layer['image_controls'].grid(row=2, column=0, rowspan=2, sticky='NEWS', pady=0)
 
             self.layer['parameters_canvas'].grid(row=1, column=0, sticky='NEWS', pady=0, padx=0)
             self.layer['parameter_scroll_canvas'].grid(row=1, column=1, sticky='NEWS', pady=0)
