@@ -16,7 +16,7 @@ import customtkinter as ctk
 torchvision.disable_beta_transforms_warning()
 import mimetypes
 import webbrowser
-from random import random
+from random import random, randint
 
 import rope.GUIElements as GE
 import rope.Styles as style
@@ -954,8 +954,6 @@ class GUI(tk.Tk):
         # Left Side
         self.layer['play_controls_left'] = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, width=200 )
         self.layer['play_controls_left'].grid(row=0, column=0, sticky='NEWS', pady=0)
-        self.widget['SaveImageButton'] = GE.Button(self.layer['play_controls_left'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=5, width=100)
-        self.widget['AutoSwapButton'] = GE.Button(self.layer['play_controls_left'], 'AutoSwapButton', 2, self.toggle_auto_swap, None, 'control', x=100, y=5, width=100)
 
         # Center
         cente_frame = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, )
@@ -990,12 +988,17 @@ class GUI(tk.Tk):
         # self.widget['StopMarkerButton'] = GE.Button(right_playframe, 'StopMarkerButton', 2, self.update_marker, 'stop', 'control', x=100, y=5, width=20)
         self.widget['SaveMarkerButton'] = GE.Button(right_playframe, 'SaveMarkerButton', 2, self.save_markers_json, None, 'control', x=95, y=5, width=20)
 
-    # Images
-        self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
-        self.layer['image_controls'].grid(row=2, column=0, rowspan=2, sticky='NEWS', pady=0)
-        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=5, width=100)
+    # Image controls
+        self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=33)
+        self.layer['image_controls'].grid(row=5, column=0, sticky='NEWS', pady=0)
 
-        self.layer['image_controls'].grid_forget()
+        self.layer['image_controls_save_image_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, width=130, height=33)
+        self.layer['image_controls_save_image_frame'].grid(row=0, column=0, sticky='E', pady=0)
+        self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls_save_image_frame'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=0, width=100, height=33)
+        
+        self.layer['image_controls_auto_swap_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, height=33)
+        self.layer['image_controls_auto_swap_frame'].grid(row=0, column=1, sticky='E', pady=0)
+        self.widget['AutoSwapTextSel'] = GE.TextSelection(self.layer['image_controls_auto_swap_frame'], 'AutoSwapTextSel', 'Auto Swap', 3, self.update_data, 'control', 'control', 220, 33, 0, 0, 0, 0, 0.72)
 
     # FaceLab
         self.layer['FaceLab_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
@@ -1005,7 +1008,7 @@ class GUI(tk.Tk):
 
       # Found Faces
         ff_frame = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_1)
-        ff_frame.grid(row=5, column=0, sticky='NEWS', pady=1)
+        ff_frame.grid(row=6, column=0, sticky='NEWS', pady=1)
         ff_frame.grid_columnconfigure(0, weight=0)
         ff_frame.grid_columnconfigure(1, weight=1)
         ff_frame.grid_rowconfigure(0, weight=0)
@@ -1030,7 +1033,7 @@ class GUI(tk.Tk):
 
       # Merged Faces
         mf_frame = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_1)
-        mf_frame.grid(row=6, column=0, sticky='NEWS', pady=0)
+        mf_frame.grid(row=7, column=0, sticky='NEWS', pady=0)
         mf_frame.grid_columnconfigure(0, minsize=10)
         mf_frame.grid_columnconfigure(1, weight=1)
         mf_frame.grid_rowconfigure(0, weight=0)
@@ -2338,6 +2341,29 @@ class GUI(tk.Tk):
 
     def select_input_faces(self, event, button):
 
+        def higlight_selected_faces(button_index):
+            # Highlight all of input faces buttons that have a true state
+            for face in self.source_faces:
+                if face["ButtonState"] or face["LockedButtonState"]:
+                    
+                    if face["LockedButtonState"] == True:
+                        face["TKButton"].config(style.media_button_on_lock_3)
+                    else:
+                        face["TKButton"].config(style.media_button_on_3)
+                        
+                    if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
+                        self.add_action("load_target_image", face["file"])
+                        self.image_loaded = True
+
+            if self.source_faces[button_index]['DFLModel']:
+                # Clear DFL models from memory
+                if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
+                    for model in list(self.models.dfl_models):
+                        if model!=self.source_faces[button_index]['DFLModel']:
+                            del self.models.dfl_models[model]._sess
+                            del self.models.dfl_models[model]
+                    gc.collect()
+
         try:
             if event.state & 0x4 != 0:
                 modifier = 'ctrl'
@@ -2350,17 +2376,19 @@ class GUI(tk.Tk):
         except:
             modifier = event
 
-        # If autoswap isnt on
-        # Clear all the highlights. Clear all states, excpet if a modifier is being used
-        # Start by turning off all the highlights on the input faces buttons
-        if modifier != 'auto':
+        def clear_face_highlights(should_clear_button_state):
             for face in self.source_faces:
                 face["TKButton"].config(style.media_button_off_3)
 
                 # and also clear the states if not selecting multiples
-                if modifier == 'none':
-                    if face["LockedButtonState"] == False:
-                        face["ButtonState"] = False
+                if should_clear_button_state:
+                    face["ButtonState"] = False
+
+        # If autoswap isnt on
+        # Clear all the highlights. Clear all states, excpet if a modifier is being used
+        # Start by turning off all the highlights on the input faces buttons
+        if modifier != 'same' and modifier != 'random':
+            clear_face_highlights(modifier == 'none')
 
             # Toggle the state of the selected Input Face
             if modifier != 'merge':
@@ -2396,28 +2424,16 @@ class GUI(tk.Tk):
             if modifier == "alt":
                 self.source_faces[button]["LockedButtonState"] = not self.source_faces[button]["LockedButtonState"]
                 self.source_faces[button]["ButtonState"] = self.source_faces[button]["LockedButtonState"]
+                
+            higlight_selected_faces(button)
 
-            # Highlight all of input faces buttons that have a true state
-            for face in self.source_faces:
-                if face["ButtonState"] or face["LockedButtonState"]:
-
-                    if face["LockedButtonState"] == True:
-                        face["TKButton"].config(style.media_button_on_lock_3)
-                    else:
-                        face["TKButton"].config(style.media_button_on_3)
-
-                    if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
-                        self.add_action("load_target_image", face["file"])
-                        self.image_loaded = True
-
-            if self.source_faces[button]['DFLModel']:
-                # Clear DFL models from memory
-                if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
-                    for model in list(self.models.dfl_models):
-                        if model!=self.source_faces[button]['DFLModel']:
-                            del self.models.dfl_models[model]._sess
-                            del self.models.dfl_models[model]
-                    gc.collect()
+        if modifier == 'random':
+            clear_face_highlights(True)
+            face_count = len(self.source_faces)
+            random_index = randint(0, face_count - 1)
+            print(random_index)
+            self.source_faces[random_index]["ButtonState"] = True
+            higlight_selected_faces(random_index)
 
         # Assign all active input faces to the active target face
         for tface in self.target_faces:
@@ -2585,21 +2601,19 @@ class GUI(tk.Tk):
 
     def auto_swap(self):
         # Reselect Target Image
+        auto_swap_state = self.widget['AutoSwapTextSel'].get()
         try:
             self.find_faces()
             self.target_faces[0]["ButtonState"] = True
             self.target_faces[0]["TKButton"].config(style.media_button_on_3)
 
             # Reselect Source images
-            self.select_input_faces('auto', '')
+            self.select_input_faces(auto_swap_state, '')
             self.toggle_swapper(True)
-        except:
+        except Exception as e:
+            print(f"Exception in auto_swap: {e}")
             pass
-
-    def toggle_auto_swap(self):
-        print("toggle auto swap")
-        self.widget['AutoSwapButton'].toggle_button()
-
+              
     def load_target(self, button, media_file, media_type):
         # Make sure the video stops playing
         self.toggle_play_video('stop')
@@ -2623,7 +2637,8 @@ class GUI(tk.Tk):
         self.title(f"{self.title_text} - {os.path.basename(media_file)}")
 
         # # find faces
-        if self.widget['AutoSwapButton'].get():
+        auto_swap_state = self.widget['AutoSwapTextSel'].get()
+        if auto_swap_state != "off":
             self.add_action('function', "gui.auto_swap()")
 
         for i in range(len(self.target_media_buttons)):
@@ -3018,7 +3033,6 @@ class GUI(tk.Tk):
         self.layer['slider_frame'].grid_forget()
         self.layer['preview_frame'].grid_forget()
         self.layer['markers_canvas'].grid_forget()
-        self.layer['image_controls'].grid_forget()
         self.layer['FaceLab_controls'].grid_forget()
         self.layer['InputVideoFrame'].grid_forget()
         self.layer['parameter_frame'].grid_forget()
@@ -3042,7 +3056,6 @@ class GUI(tk.Tk):
 
         elif self.widget['PreviewModeTextSel'].get()=='Image':
             self.video_loaded = False
-            self.layer['image_controls'].grid(row=2, column=0, rowspan=2, sticky='NEWS', pady=0)
 
             self.layer['parameters_canvas'].grid(row=1, column=0, sticky='NEWS', pady=0, padx=0)
             self.layer['parameter_scroll_canvas'].grid(row=1, column=1, sticky='NEWS', pady=0)
