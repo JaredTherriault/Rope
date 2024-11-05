@@ -2431,7 +2431,6 @@ class GUI(tk.Tk):
             clear_face_highlights(True)
             face_count = len(self.source_faces)
             random_index = randint(0, face_count - 1)
-            print(random_index)
             self.source_faces[random_index]["ButtonState"] = True
             higlight_selected_faces(random_index)
 
