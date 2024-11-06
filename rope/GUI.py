@@ -234,8 +234,8 @@ class GUI(tk.Tk):
             shortcuts["Nudge Left 1 Frame"]: lambda:self.back_one_frame(),
             shortcuts["Nudge Right 1 Frame"]: lambda: self.forward_one_frame(),
             shortcuts["Show Mask"]: lambda: self.toggle_maskview(),
-            shortcuts["Previous Media"]: lambda: self.select_previous_media(),
-            shortcuts["Next Media"]: lambda: self.select_next_media(),
+            shortcuts["Previous Media"]: lambda: self.select_previous_target_media(),
+            shortcuts["Next Media"]: lambda: self.select_next_target_media(),
         }
         self.bind('<Key>', self.handle_key_press)
         self.bind("<Return>", lambda event: self.focus_set())
@@ -473,8 +473,8 @@ class GUI(tk.Tk):
                 shortcuts["Nudge Left 1 Frame"]: lambda:self.back_one_frame(),
                 shortcuts["Nudge Right 1 Frame"]: lambda: self.forward_one_frame(),
                 shortcuts["Show Mask"]: lambda: self.toggle_maskview(),
-                shortcuts["Previous Media"]: lambda: self.select_previous_media(),
-                shortcuts["Next Media"]: lambda: self.select_next_media(),
+                shortcuts["Previous Media"]: lambda: self.select_previous_target_media(),
+                shortcuts["Next Media"]: lambda: self.select_next_target_media(),
             }
 
         # Load shortcuts from JSON
@@ -3384,29 +3384,28 @@ class GUI(tk.Tk):
         self.add_action('control', self.control)
         self.add_action('get_requested_video_frame', self.video_slider.get())
 
-    def select_adjacent_media(self, offset : int):
+    def select_adjacent_target_media(self, offset : int):
 
         if not self.media_file:
             return
 
         new_index = 0
-        for i in range(len(self.target_media_buttons)):
+        target_media_buttons_length = len(self.target_media_buttons)
+        for i in range(target_media_buttons_length):
             if self.target_media_buttons[i].media_file == self.media_file:
-                new_index = i + offset
+                new_index = (i + offset) % target_media_buttons_length
                 break
         
-        if new_index > len(self.target_media_buttons) - 1:
-            new_index = 0
-        elif new_index < 0:
-            new_index = len(self.target_media_buttons) - 1
+        if new_index < 0:
+            new_index += target_media_buttons_length
 
         self.load_target(new_index, self.target_media_buttons[new_index].media_file, self.widget['PreviewModeTextSel'].get())
 
-    def select_previous_media(self):
-        self.select_adjacent_media(-1)
+    def select_previous_target_media(self):
+        self.select_adjacent_target_media(-1)
 
-    def select_next_media(self):
-        self.select_adjacent_media(1)
+    def select_next_target_media(self):
+        self.select_adjacent_target_media(1)
 
     def parameter_io(self, task, initial_dir="."):
         if task == 'save':
