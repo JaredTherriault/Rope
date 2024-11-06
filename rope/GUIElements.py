@@ -553,9 +553,10 @@ class Timeline():
         line_height = 8
         line_width = 1.5
         line_x1 = line_loc-line_width
-        line_y1 = slider_center -line_height
+        self.line_y1 = slider_center -line_height
         line_x2 = line_loc+line_width
-        line_y2 = slider_center +line_height
+        self.line_y2 = slider_center +line_height
+        self.handle_width = abs(line_x2 - line_x1)
 
         trough_x1 = self.slider_left
         trough_y1 = slider_center-1
@@ -563,7 +564,7 @@ class Timeline():
         trough_y2 = slider_center+1
 
         self.slider.create_rectangle(trough_x1, trough_y1, trough_x2, trough_y2, fill='#43474D', outline='')
-        self.handle = self.slider.create_rectangle(line_x1, line_y1, line_x2, line_y2, fill='#FFFFFF', outline='')
+        self.handle = self.slider.create_rectangle(line_x1, self.line_y1, line_x2, self.line_y2, fill='#FFFFFF', outline='')
 
     def coord2pos(self, coord):
         return float(coord-self.slider_left)*self.max_/(self.slider_right-self.slider_left)
@@ -637,7 +638,10 @@ class Timeline():
         # moving sends many events, so only update when the next frame is reached
         if position != self.last_position:
             # Move handle to coordinate based on position
-            self.slider.move(self.handle, self.pos2coord(position) - self.pos2coord(self.last_position), 0)
+            coord = int((position / self.max_) * (self.slider_right - self.slider_left)) + self.slider_left
+            self.slider.coords(self.handle,
+                coord - self.handle_width / 2, self.line_y1,
+                coord + self.handle_width / 2, self.line_y2)
 
             if requested:
                 self.add_action("get_requested_video_frame", position)
