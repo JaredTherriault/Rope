@@ -2533,11 +2533,12 @@ class GUI(tk.Tk):
                 if file_type == 'image':
                     is_animated = False
                     try:
-                        try:
+
+                        def open_cv():
                             image = cv2.imread(file)
-                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                        except:
-                            # Open with Pillow
+                            return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                        def open_pil():
                             with Image.open(file) as img:
 
                                 frames = list(ImageSequence.Iterator(img))
@@ -2547,7 +2548,19 @@ class GUI(tk.Tk):
 
                                 # If it's an animated GIF, use the first frame
                                 img = img.convert('RGB')  # Ensure it has RGB mode
-                                image = np.array(img)
+                                return np.array(img), is_animated
+
+                        try:
+                            # Prioritize pil for webp and gif images
+                            if file.endswith(".webp") or file.endswith(".gif"):
+                                image, is_animated = open_pil()
+                            else:
+                                image = open_cv()
+                        except:
+                            if file.endswith(".webp") or file.endswith(".gif"):
+                                image = open_cv()
+                            else:
+                                image, is_animated = open_pil()
 
                     except Exception as e:
                         print(f"Trouble reading file '{file}': {e}")
