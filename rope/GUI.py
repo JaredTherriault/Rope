@@ -2606,7 +2606,8 @@ class GUI(tk.Tk):
                 self.target_media_buttons[i].config( image = self.target_media[i],  command=lambda i=i: self.load_target(i, images[i][1], self.widget['PreviewModeTextSel'].get()))
                 self.target_media_buttons[i].media_file = images[i][1]
                 self.bind_scroll_events(self.target_media_buttons[i], self.target_videos_mouse_wheel)
-                self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
+                item_id = self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
+                self.target_media_buttons[i].item_id = item_id
 
             #self.target_media_canvas.configure(scrollregion = self.target_media_canvas.bbox("all"))
             self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
@@ -2625,7 +2626,8 @@ class GUI(tk.Tk):
                 self.bind_scroll_events(self.target_media_buttons[i], self.target_videos_mouse_wheel)
                 self.target_media_buttons[i].config(image = self.target_media[i], text=filename, compound='top', anchor='n',command=lambda i=i: self.load_target(i, videos[i][1], self.widget['PreviewModeTextSel'].get()))
                 self.target_media_buttons[i].media_file = videos[i][1]
-                self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
+                item_id = self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
+                self.target_media_buttons[i].item_id = item_id
 
             self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
 
@@ -3384,9 +3386,33 @@ class GUI(tk.Tk):
         self.add_action('control', self.control)
         self.add_action('get_requested_video_frame', self.video_slider.get())
 
+    def scroll_to_item(self, canvas, item_id, margin_in_pixels = 10):
+        # Get the bounding box of the item (x1, y1, x2, y2)
+        bbox = canvas.bbox(item_id)
+        
+        if bbox:  # If the item exists            
+            # Calculate the horizontal and vertical scrolling needed
+            x1, y1, x2, y2 = bbox
+            
+            # Calculate how much we need to scroll to bring the item into view
+            delta_x = max(0, x1 - margin_in_pixels)
+            delta_y = max(0, y1 - margin_in_pixels)
+            
+            # Scroll the canvas to bring the item into view
+            canvas.xview_scroll(int(delta_x), "units")
+            canvas.yview_scroll(int(delta_y), "units")
+
+            canvas.xview_moveto(delta_x / canvas.bbox("all")[2])  
+            canvas.yview_moveto(delta_y / canvas.bbox("all")[3])
+
+    def scroll_to_target_media(self, item_id):
+        self.scroll_to_item(self.target_media_canvas, item_id)
+
+        self.target_videos_mouse_wheel(event=0, delta=0) # Update scrollbar
+
     def select_adjacent_target_media(self, offset : int):
 
-        if not self.media_file:
+        if not hasattr(self, 'media_file') or not self.media_file:
             return
 
         new_index = 0
@@ -3400,6 +3426,7 @@ class GUI(tk.Tk):
             new_index += target_media_buttons_length
 
         self.load_target(new_index, self.target_media_buttons[new_index].media_file, self.widget['PreviewModeTextSel'].get())
+        self.scroll_to_target_media(self.target_media_buttons[new_index].item_id)
 
     def select_previous_target_media(self):
         self.select_adjacent_target_media(-1)
