@@ -2646,11 +2646,22 @@ class GUI(tk.Tk):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
         try:
             self.find_faces()
-            self.target_faces[0]["ButtonState"] = True
-            self.target_faces[0]["TKButton"].config(style.media_button_on_3)
 
-            # Reselect Source images
-            self.select_input_faces(auto_swap_state, '')
+            # "Cosmetically" turn off all target faces
+            # Don't use toggle_found_faces_buttons_state
+            # because that will affect currently selected faces
+            def deselect_all_target_faces():
+                for i in range(len(self.target_faces)):
+                    self.target_faces[i]["ButtonState"] = False
+                    self.target_faces[i]["TKButton"].config(style.media_button_off_3)
+
+            for i in range(len(self.target_faces)):
+                deselect_all_target_faces()
+                self.target_faces[i]["ButtonState"] = True
+                self.target_faces[i]["TKButton"].config(style.media_button_on_3)
+
+                # Reselect Source images
+                self.select_input_faces(auto_swap_state, '')
             self.toggle_swapper(True)
 
         except Exception as e:
