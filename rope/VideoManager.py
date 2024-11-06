@@ -389,7 +389,7 @@ class VideoManager():
                     self.r_frame_q.append(temp)
 
             except Exception as e:
-                print(f"Failed to get frame from OpenCV, trying PIL: {e}")
+                # print(f"Failed to get frame from OpenCV, trying PIL: {e}")
 
                 # If we reach this point, OpenCV failed, try using PIL
                 try:
@@ -871,12 +871,12 @@ class VideoManager():
             if self.control['EnhanceFrameButton']:
                 temp[0] = self.enhance_video(temp[0], frame_number, True)
 
-            for item in self.process_qs:
-                if item['FrameNumber'] == frame_number:
-                    item['ProcessedFrame'] = temp[0]
-                    item['Status'] = 'finished'
-                    item['ThreadTime'] = time.time() - item['ThreadTime']
-                    break
+        for item in self.process_qs:
+            if item['FrameNumber'] == frame_number:
+                item['ProcessedFrame'] = temp[0] if len(temp) > 0 else []
+                item['Status'] = 'finished' if len(temp) > 0 else 'clear'
+                item['ThreadTime'] = time.time() - item['ThreadTime']
+                break
 
     def enhance_video(self, target_image, frame_number, use_markers):
         # Grab a local copy of the parameters to prevent threading issues
