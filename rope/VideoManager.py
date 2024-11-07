@@ -1271,6 +1271,9 @@ class VideoManager():
         return img.astype(np.uint8)
 
     def findCosineDistance(self, vector1, vector2):
+        if len(vector1) == 0 or len(vector2) == 0:
+            return 100.0
+
         vector1 = vector1.ravel()
         vector2 = vector2.ravel()
         cos_dist = 1.0 - np.dot(vector1, vector2)/(np.linalg.norm(vector1)*np.linalg.norm(vector2)) # 2..0
