@@ -1025,7 +1025,7 @@ class GUI(tk.Tk):
         button_frame = tk.Frame(ff_frame, style.canvas_frame_label_2, height = 99, width = 224)
         button_frame.grid( row = 0, column = 0, )
 
-        self.widget['FindFacesButton'] = GE.Button(button_frame, 'FindFaces', 2, self.find_faces, None, 'control', x=112, y=0, width=112, height=33)
+        self.widget['FindFacesButton'] = GE.Button(button_frame, 'FindFaces', 2, self.on_click_find_faces_button, None, 'control', x=112, y=0, width=112, height=33)
         self.widget['ClearFacesButton'] = GE.Button(button_frame, 'ClearFaces', 2, self.clear_faces, None, 'control', x=112, y=33, width=112, height=33)
         self.widget['SwapFacesButton'] = GE.Button(button_frame, 'SwapFaces', 2, self.toggle_swapper, None, 'control', x=0, y=0, width=112, height=33)
         self.widget['EditFacesButton'] = GE.Button(button_frame, 'EditFaces', 2, self.toggle_faces_editor, None, 'control', x=0, y=33, width=112, height=33)
@@ -1492,6 +1492,22 @@ class GUI(tk.Tk):
         row = row + 1
         self.widget['MergeTextSel'] = GE.TextSelection(self.layer['parameters_frame'], 'MergeTextSel', 'Merge Math', 3, self.select_input_faces, 'merge', '', 398, 20, row, 0, padx, pady, 0.62)
 
+        # Face Weights
+        row = row + 1
+        self.widget['ApplyFaceWeightsSwitch'] = GE.Switch2(self.layer['parameters_frame'], 'ApplyFaceWeightsSwitch', 'Apply Face Weights', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady)
+        row = row + 1
+        self.widget['FaceWeights0Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights0Slider', 'Face0', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        row = row + 1
+        self.widget['FaceWeights1Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights1Slider', 'Face1', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        row = row + 1
+        self.widget['FaceWeights2Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights2Slider', 'Face2', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        row = row + 1
+        self.widget['FaceWeights3Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights3Slider', 'Face3', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        row = row + 1
+        self.widget['FaceWeights4Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights4Slider', 'Face4', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        row = row + 1
+        self.widget['FaceWeights5Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights5Slider', 'Face5', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+    
         ### Face Editor ###
         row = 1
         column = 0
@@ -1713,6 +1729,8 @@ class GUI(tk.Tk):
                 self.populate_target_videos()
             elif name=='ThreadsSlider':
                 self.models.set_number_of_threads(self.parameters[name])
+            elif 'FaceWeights' in name:
+                self.select_input_faces("same", "")
             # Face Editor
             '''
             elif mode=='parameter_face_editor':
@@ -2249,6 +2267,14 @@ class GUI(tk.Tk):
 
         torch.cuda.empty_cache()
 
+    def on_click_find_faces_button(self):
+        auto_swap_state = self.widget['AutoSwapTextSel'].get()
+        if auto_swap_state != "off":
+            self.clear_faces()
+            self.auto_swap()
+        else:
+            self.find_faces()
+
     def find_faces(self):
         try:
             img = torch.from_numpy(self.video_image).to(self.models.device)
@@ -2365,7 +2391,6 @@ class GUI(tk.Tk):
                         self.add_action("load_target_image", face["file"])
                         self.image_loaded = True
 
-            if self.source_faces[button_index]['DFLModel']:
                 # Clear DFL models from memory
                 if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
                     for model in list(self.models.dfl_models):
@@ -2397,15 +2422,14 @@ class GUI(tk.Tk):
         # If autoswap isnt on
         # Clear all the highlights. Clear all states, excpet if a modifier is being used
         # Start by turning off all the highlights on the input faces buttons
-        if modifier != 'same' and modifier != 'random':
+        if modifier != 'same' and modifier != 'random' and modifier != 'merge':
             clear_face_highlights(modifier == 'none')
 
             # Toggle the state of the selected Input Face
-            if modifier != 'merge':
-                face_locked = "LockedButtonState" in self.source_faces[button] and self.source_faces[button]["LockedButtonState"] == True
+            face_locked = "LockedButtonState" in self.source_faces[button] and self.source_faces[button]["LockedButtonState"] == True
 
-                if not face_locked:
-                    self.source_faces[button]["ButtonState"] = not self.source_faces[button]["ButtonState"]
+            if not face_locked:
+                self.source_faces[button]["ButtonState"] = not self.source_faces[button]["ButtonState"]
 
             # if shift find any other input faces and activate the state of all faces in between
             if modifier == 'shift':
@@ -2482,7 +2506,26 @@ class GUI(tk.Tk):
                     if self.widget['MergeTextSel'].get() == 'Median':
                         tface['AssignedEmbedding'] = np.median(temp_holder, 0)
                     elif self.widget['MergeTextSel'].get() == 'Mean':
-                        tface['AssignedEmbedding'] = np.mean(temp_holder, 0)
+                        weighted_array = []
+                        if self.widget['ApplyFaceWeightsSwitch'].get() == True:
+
+                            weight_list = [
+                                self.widget['FaceWeights0Slider'].get(), 
+                                self.widget['FaceWeights1Slider'].get(), 
+                                self.widget['FaceWeights2Slider'].get(),
+                                self.widget['FaceWeights3Slider'].get(),
+                                self.widget['FaceWeights4Slider'].get(),
+                                self.widget['FaceWeights5Slider'].get()]
+
+                            # If no weight difference, don't bother weighting
+                            if all(x == weight_list[0] for x in weight_list):
+                                weighted_array = temp_holder
+                            else:
+                                for i in range(len(temp_holder)):
+                                    weighted_array.extend([temp_holder[i]] * (weight_list[i] if i < len(weight_list) else 10))
+                        else:
+                            weighted_array = temp_holder
+                        tface['AssignedEmbedding'] = np.mean(weighted_array, 0)
 
                     self.temp_emb = tface['AssignedEmbedding']
                 else:

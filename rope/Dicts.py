@@ -724,6 +724,43 @@ DEFAULT_DATA = {
 'ColorHueSliderMax':                    0.5,
 'ColorHueSliderMin':                    -0.5,
 
+# Face Weights
+'FaceWeights0SliderAmount':       10,
+'FaceWeights0SliderInc':          1,
+'FaceWeights0SliderInfoText':     'FACE 0 WEIGHT:\nSpecifies a weight for the first selected face in a live merged embedding.',
+'FaceWeights0SliderMax':          30,
+'FaceWeights0SliderMin':          1,
+
+'FaceWeights1SliderAmount':       10,
+'FaceWeights1SliderInc':          1,
+'FaceWeights1SliderInfoText':     'FACE 1 WEIGHT:\nSpecifies a weight for the second selected face in a live merged embedding.',
+'FaceWeights1SliderMax':          30,
+'FaceWeights1SliderMin':          1,
+
+'FaceWeights2SliderAmount':       10,
+'FaceWeights2SliderInc':          1,
+'FaceWeights2SliderInfoText':     'FACE 2 WEIGHT:\nSpecifies a weight for the third selected face in a live merged embedding.',
+'FaceWeights2SliderMax':          30,
+'FaceWeights2SliderMin':          1,
+
+'FaceWeights3SliderAmount':       10,
+'FaceWeights3SliderInc':          1,
+'FaceWeights3SliderInfoText':     'FACE 3 WEIGHT:\nSpecifies a weight for the fourth selected face in a live merged embedding.',
+'FaceWeights3SliderMax':          30,
+'FaceWeights3SliderMin':          1,
+
+'FaceWeights4SliderAmount':       10,
+'FaceWeights4SliderInc':          1,
+'FaceWeights4SliderInfoText':     'FACE 4 WEIGHT:\nSpecifies a weight for the fifth selected face in a live merged embedding.',
+'FaceWeights4SliderMax':          30,
+'FaceWeights4SliderMin':          1,
+
+'FaceWeights5SliderAmount':       10,
+'FaceWeights5SliderInc':          1,
+'FaceWeights5SliderInfoText':     'FACE 5 WEIGHT:\nSpecifies a weight for the sixth selected face in a live merged embedding.',
+'FaceWeights5SliderMax':          30,
+'FaceWeights5SliderMin':          1,
+
 # Text Selection
 'DetectTypeTextSelInfoText':        'FACE DETECTION MODEL:\nSelect the face detection model. Mostly only subtle differences, but can significant differences when the face is at extreme angles or covered.',
 'DetectTypeTextSelMode':            'Retinaface',
@@ -802,6 +839,11 @@ DEFAULT_DATA = {
 'SwapperTypeTextSelInfoText':      'SWAPPER OUTPUT RESOLUTION:\nDetermines the resolution of the swapper output.',
 'SwapperTypeTextSelMode':          '128',
 'SwapperTypeTextSelModes':         ['128', '256', '512'],
+
+# Face Weights
+'ApplyFaceWeightsSwitchState':    False,
+'ApplyFaceWeightsSwitchInfoText': 'APPLY FACE WEIGHTS:\nAffect the weights of up to six faces in the merged embedding. Indices are based on the order in the source faces list. Saved embeddings come first.',
+
 
 # Frame skip
 'FrameSkipModeTextSelInfoText':    'FRAME SKIP MODE:\nAllow video playback to skip frames. Does not affect recording.\nMANUAL: Set a constant skip rate.\nAUTO: Allow Rope to set the number of frames to skip based on the video playback speed, trying to maintain the original timing.',
