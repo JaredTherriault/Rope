@@ -75,7 +75,7 @@ DEFAULT_DATA = {
 'LoadTVideosIconOn':           './rope/media/save.png',
 'LoadTVideosInfoText':             'SELECT INPUT VIDEOS/IMAGES FOLDER:\nSelect and load media from folder.',
 'LoadTVideosState':         False,
-'LoadTVideosText':           'Select Videos Folder',
+'LoadTVideosText':           'Select Media Folder',
 'MaskViewDisplay':         'text',
 'MaskViewInfoText':             'SHOW MASKS:\nDisplays the mask for a face side-by-side with the face. Useful for understanding the masking behaviors and results.',
 'MaskViewState':            False,
@@ -165,10 +165,15 @@ DEFAULT_DATA = {
 'TLRightInfoText':                  'TIMELEFT NUDGE RIGHT:\nMove the timeline handle to the RIGHT 30 frames.',
 'TLRightState':                     False,
 
-'SaveImageButtonDisplay':                   'text',
-'SaveImageButtonInfoText':                  'SAVE IMAGE:\nSaves the current image to your Output Folder.',
-'SaveImageButtonState':                     False,
-'SaveImageButtonText':             'Save Image',
+'SaveImageButtonDisplay':            'text',
+'SaveImageButtonInfoText':           'SAVE IMAGE:\nSaves the current image to your Output Folder.',
+'SaveImageButtonState':              False,
+'SaveImageButtonText':               'Save Image',
+
+'DeleteMediaButtonDisplay':          'text',
+'DeleteMediaButtonInfoText':         'DELETE MEDIA:\nMoves the current media to the OS recycle bin / trash and selects the next target media in the list.',
+'DeleteMediaButtonState':            False,
+'DeleteMediaButtonText':             'Delete Media',
 
 'AutoSwapTextSelInfoText':        'AUTOSWAP:\nAutomatcially applies your currently selected Input Face to new images.\nSAME: Use the same input faces\nRANDOM: Randomize input faces (locked faces not affected)',
 'AutoSwapTextSelMode':            'off',

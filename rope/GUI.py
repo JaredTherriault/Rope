@@ -197,6 +197,7 @@ class GUI(tk.Tk):
                     "Show Mask": "x",
                     "Previous Media": "left",
                     "Next Media": "right",
+                    "Delete Media": "delete",
                 }
         shortcuts = load_shortcuts_from_json()
 
@@ -236,6 +237,7 @@ class GUI(tk.Tk):
             shortcuts["Show Mask"]: lambda: self.toggle_maskview(),
             shortcuts["Previous Media"]: lambda: self.select_previous_target_media(),
             shortcuts["Next Media"]: lambda: self.select_next_target_media(),
+            shortcuts["Delete Media"]: lambda: self.on_click_delete_media_button(),
         }
         self.bind('<Key>', self.handle_key_press)
         self.bind("<Return>", lambda event: self.focus_set())
@@ -438,6 +440,7 @@ class GUI(tk.Tk):
                     "Show Mask": "x",
                     "Previous Media": "left",
                     "Next Media": "right",
+                    "Delete Media": "delete",
                 }
         shortcuts = load_shortcuts_from_json()
 
@@ -475,6 +478,7 @@ class GUI(tk.Tk):
                 shortcuts["Show Mask"]: lambda: self.toggle_maskview(),
                 shortcuts["Previous Media"]: lambda: self.select_previous_target_media(),
                 shortcuts["Next Media"]: lambda: self.select_next_target_media(),
+                shortcuts["Delete Media"]: lambda: self.on_click_delete_media_button(),
             }
 
         # Load shortcuts from JSON
@@ -999,14 +1003,24 @@ class GUI(tk.Tk):
     # Image controls
         self.layer['image_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=33)
         self.layer['image_controls'].grid(row=5, column=0, sticky='NEWS', pady=0)
+        self.layer['image_controls'].grid_columnconfigure(0, weight=0) 
+        self.layer['image_controls'].grid_columnconfigure(1, weight=0)
+        self.layer['image_controls'].grid_columnconfigure(10, weight=1)
 
+        # Save Image Frame (aligned left)
         self.layer['image_controls_save_image_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, width=130, height=33)
-        self.layer['image_controls_save_image_frame'].grid(row=0, column=0, sticky='E', pady=0)
+        self.layer['image_controls_save_image_frame'].grid(row=0, column=0, sticky='W', pady=0)
         self.widget['SaveImageButton'] = GE.Button(self.layer['image_controls_save_image_frame'], 'SaveImageButton', 2, self.save_image, None, 'control', x=0, y=0, width=100, height=33)
-        
+
+        # Auto Swap Frame (aligned left)
         self.layer['image_controls_auto_swap_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, height=33)
-        self.layer['image_controls_auto_swap_frame'].grid(row=0, column=1, sticky='E', pady=0)
+        self.layer['image_controls_auto_swap_frame'].grid(row=0, column=1, sticky='W', pady=0)
         self.widget['AutoSwapTextSel'] = GE.TextSelection(self.layer['image_controls_auto_swap_frame'], 'AutoSwapTextSel', 'Auto Swap', 3, self.update_data, 'control', 'control', 220, 33, 0, 0, 0, 0, 0.72)
+
+        # Delete Media Frame (aligned right)
+        self.layer['image_controls_delete_image_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, width=130, height=33)
+        self.layer['image_controls_delete_image_frame'].grid(row=0, column=10, sticky='E', pady=0)
+        self.widget['DeleteMediaButton'] = GE.Button(self.layer['image_controls_delete_image_frame'], 'DeleteMediaButton', 2, self.on_click_delete_media_button, None, 'control', x=0, y=0, width=100, height=33)
 
     # FaceLab
         self.layer['FaceLab_controls'] = tk.Frame(self.layer['preview_column'], style.canvas_frame_label_2, height=80)
@@ -2639,40 +2653,49 @@ class GUI(tk.Tk):
             if result is not None:
                 videos.append(result)
 
-        delx, dely = 100, 120
         if self.widget['PreviewModeTextSel'].get()== 'Image':#images
             for i in range(len(images)):
-                self.target_media_buttons.append(tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 190))
+                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 190)
+                self.target_media_buttons.append(button)
 
                 rgb_video = Image.fromarray(images[i][0])
                 self.target_media.append(ImageTk.PhotoImage(image=rgb_video))
-                self.target_media_buttons[i].config( image = self.target_media[i],  command=lambda i=i: self.load_target(i, images[i][1], self.widget['PreviewModeTextSel'].get()))
-                self.target_media_buttons[i].media_file = images[i][1]
-                self.bind_scroll_events(self.target_media_buttons[i], self.target_videos_mouse_wheel)
-                item_id = self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
-                self.target_media_buttons[i].item_id = item_id
+                button.config( image = self.target_media[i],  command=lambda i=i: self.load_target(images[i][1], self.widget['PreviewModeTextSel'].get()))
+                button.media_file = images[i][1]
+                self.bind_scroll_events(button, self.target_videos_mouse_wheel)
 
             #self.target_media_canvas.configure(scrollregion = self.target_media_canvas.bbox("all"))
-            self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
+            self.redraw_target_media_canvas()
 
         elif self.widget['PreviewModeTextSel'].get()=='Video':#videos
 
             for i in range(len(videos)):
-                self.target_media_buttons.append(tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 190))
+                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 190)
+                self.target_media_buttons.append(button)
                 self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(videos[i][0])))
 
                 filename = os.path.basename(videos[i][1])
-                hovertip = RopeHovertip(self.target_media_buttons[i], filename, x_offset=190)
+                hovertip = RopeHovertip(button, filename, x_offset=190)
                 if len(filename)>32:
                     filename = filename[:29]+'...'
 
-                self.bind_scroll_events(self.target_media_buttons[i], self.target_videos_mouse_wheel)
-                self.target_media_buttons[i].config(image = self.target_media[i], text=filename, compound='top', anchor='n',command=lambda i=i: self.load_target(i, videos[i][1], self.widget['PreviewModeTextSel'].get()))
-                self.target_media_buttons[i].media_file = videos[i][1]
-                item_id = self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
-                self.target_media_buttons[i].item_id = item_id
+                self.bind_scroll_events(button, self.target_videos_mouse_wheel)
+                button.config(image = self.target_media[i], text=filename, compound='top', anchor='n',command=lambda i=i: self.load_target(videos[i][1], self.widget['PreviewModeTextSel'].get()))
+                button.media_file = videos[i][1]
 
-            self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
+            self.redraw_target_media_canvas()
+
+    def redraw_target_media_canvas(self):
+        # Clear all canvas items
+        self.target_media_canvas.delete("all")
+
+        delx, dely = 100, 120
+
+        # Re-add the items to the canvas, repositioning them as needed
+        for i, button in enumerate(self.target_media_buttons):
+            button.item_id = self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
+
+        self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
 
     def toggle_auto_swap(self):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
@@ -2711,7 +2734,7 @@ class GUI(tk.Tk):
             print(f"Exception in auto_swap: {e}")
             pass
               
-    def load_target(self, button, media_file, media_type):
+    def load_target(self, media_file, media_type):
         # Make sure the video stops playing
         self.toggle_play_video('stop')
         self.image_loaded = False
@@ -2740,9 +2763,10 @@ class GUI(tk.Tk):
             self.toggle_play_video("play")
 
         for i in range(len(self.target_media_buttons)):
-            self.target_media_buttons[i].config(style.media_button_off_3)
-
-        self.target_media_buttons[button].config(style.media_button_on_3)
+            if self.target_media_buttons[i].media_file == media_file:
+                self.target_media_buttons[i].config(style.media_button_on_3)
+            else:
+                self.target_media_buttons[i].config(style.media_button_off_3)
 
         # delete all markers
         self.layer['markers_canvas'].delete('all')
@@ -2757,6 +2781,8 @@ class GUI(tk.Tk):
         #endregion
 
         self.add_action("markers", self.markers)
+
+        self.set_delete_media_button_confirm_message_state(False)
 
     # @profile
     def set_image(self, image, requested):
@@ -3378,10 +3404,80 @@ class GUI(tk.Tk):
             self.stop_image = self.video_slider_canvas.create_image(position, 30, image=self.stop_marker_icon)
 
     def save_image(self):
-        filename =  self.media_file_name[0]+"_"+str(time.time())[:10]
-        filename = os.path.join(self.json_dict["saved videos"], filename)
-        cv2.imwrite(filename+'.png', cv2.cvtColor(self.video_image, cv2.COLOR_BGR2RGB))
-        print('Image saved as:', filename+'.png')
+        if hasattr(self, "media_file_name") and len(self.media_file_name) > 0:
+            filename =  self.media_file_name[0]+"_"+str(time.time())[:10]
+            filename = os.path.join(self.json_dict["saved videos"], filename)
+            cv2.imwrite(filename+'.png', cv2.cvtColor(self.video_image, cv2.COLOR_BGR2RGB))
+            print('Image saved as:', filename+'.png')
+
+    def remove_target_media_from_list(self, path):
+
+        found_media_index = -1
+        for i in range(len(self.target_media_buttons)):
+            if hasattr(self.target_media_buttons[i], "media_file") and self.target_media_buttons[i].media_file == path:
+                found_media_index = i
+                break
+
+        # If a matching media item is found, remove it
+        if found_media_index != -1:
+            self.target_media.pop(found_media_index)
+            self.target_media_buttons.pop(found_media_index)
+
+            # Redraw all remaining items (this is an alternative to repositioning)
+            self.redraw_target_media_canvas()
+            current_button_index = self.find_currently_selected_target_media_index()
+            self.scroll_to_target_media(self.target_media_buttons[current_button_index].item_id)
+        
+
+    def delete_target_media(self, path):
+
+        self.remove_target_media_from_list(path)
+
+        try:
+            # Try to import send2trash module
+            from send2trash import send2trash
+
+                # If import successful, use send2trash to send file to trash
+            send2trash(path)
+            message = f"File '{path}' sent to trash/recycle bin successfully."
+            print(message)
+
+        except:
+            # If send2trash module not available, delete file permanently
+            os.remove(path)
+            message = f"File '{path}' deleted permanently. If you want to send to trash/recycle, consider installing send2trash (pip install send2trash)."
+            print(message)
+
+    def set_delete_media_button_confirm_message_state(self, new_state):
+        
+        button = self.widget['DeleteMediaButton']
+
+        if new_state:
+            button.enable_button()
+            button.button.config(text="Confirm?")
+        else:
+            button.disable_button()
+            button.button.config(text="Delete Media")
+
+    def on_click_delete_media_button(self):
+        if hasattr(self, "media_file"):
+
+            button = self.widget['DeleteMediaButton']
+
+            if not button:
+                return
+
+            if button.state == False:
+                self.set_delete_media_button_confirm_message_state(True)
+
+            else:
+                if os.path.exists(self.media_file):
+
+                    path = self.media_file
+                    self.select_next_target_media()
+                    self.delete_target_media(path)
+
+                    self.set_delete_media_button_confirm_message_state(False)
 
     def clear_mem(self):
         self.widget['RestorerSwitch'].set(False)
@@ -3464,22 +3560,33 @@ class GUI(tk.Tk):
 
         self.target_videos_mouse_wheel(event=0, delta=0) # Update scrollbar
 
+    def find_currently_selected_target_media_index(self):
+
+        new_index = -1
+        target_media_buttons_length = len(self.target_media_buttons)
+        for i in range(target_media_buttons_length):
+            if self.target_media_buttons[i].media_file == self.media_file:
+                return i
+
+        return new_index
+
     def select_adjacent_target_media(self, offset : int):
 
         if not hasattr(self, 'media_file') or not self.media_file:
             return
 
-        new_index = 0
+        new_index = self.find_currently_selected_target_media_index()
+
+        if new_index == -1: # If nothing selected
+            return
+
         target_media_buttons_length = len(self.target_media_buttons)
-        for i in range(target_media_buttons_length):
-            if self.target_media_buttons[i].media_file == self.media_file:
-                new_index = (i + offset) % target_media_buttons_length
-                break
-        
+        new_index = (new_index + offset) % target_media_buttons_length
+
         if new_index < 0:
             new_index += target_media_buttons_length
 
-        self.load_target(new_index, self.target_media_buttons[new_index].media_file, self.widget['PreviewModeTextSel'].get())
+        self.load_target(self.target_media_buttons[new_index].media_file, self.widget['PreviewModeTextSel'].get())
         self.scroll_to_target_media(self.target_media_buttons[new_index].item_id)
 
     def select_previous_target_media(self):
