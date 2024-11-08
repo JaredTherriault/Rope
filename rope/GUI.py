@@ -3426,7 +3426,9 @@ class GUI(tk.Tk):
             # Redraw all remaining items (this is an alternative to repositioning)
             self.redraw_target_media_canvas()
             current_button_index = self.find_currently_selected_target_media_index()
-            self.scroll_to_target_media(self.target_media_buttons[current_button_index].item_id)
+
+            if current_button_index != -1:
+                self.scroll_to_target_media(self.target_media_buttons[current_button_index].item_id)
         
 
     def delete_target_media(self, path):
