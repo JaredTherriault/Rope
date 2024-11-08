@@ -50,7 +50,7 @@ def process_video(file):
                 new_height = 100
                 new_width = int(new_height / ratio)
                 video_frame = cv2.resize(video_frame, (new_width, new_height))
-                return [video_frame, file]
+                return video_frame
             else:
                 print('Trouble reading file:', file)
         else:
@@ -886,6 +886,7 @@ class GUI(tk.Tk):
         scroll_canvas.grid_columnconfigure(0, weight=1)
 
         self.static_widget['input_faces_scrollbar'] = GE.Scrollbar_y(scroll_canvas, self.source_faces_canvas)
+
         # GE.Separator_y(scroll_canvas, 14, 0)
         GE.Separator_y(self.layer['InputVideoFrame'], 229, 0)
         GE.Separator_x(self.layer['InputVideoFrame'], 0, 41)
@@ -1793,6 +1794,8 @@ class GUI(tk.Tk):
         center = center+self.target_media_canvas.yview()[0]
         self.static_widget['input_videos_scrollbar'].set(center)
 
+        self.render_thumbnail_for_visible_target_media_buttons()
+
     def parameters_mouse_wheel(self, event, delta = 0):
         self.parameters_canvas.yview_scroll(delta, "units")
 
@@ -1950,7 +1953,8 @@ class GUI(tk.Tk):
         # Build UI, update ui with default data
         self.create_gui()
 
-        self.video_image = cv2.cvtColor(cv2.imread('./rope/media/splash_next.png'), cv2.COLOR_BGR2RGB)
+        self.splash_image = cv2.cvtColor(cv2.imread('./rope/media/splash_next.png'), cv2.COLOR_BGR2RGB)
+        self.video_image = self.splash_image
         self.resize_image()
 
         # Create parameters and controls and and selctively fill with UI data
@@ -2642,16 +2646,9 @@ class GUI(tk.Tk):
                         else:
                             images.append([image, file])
 
-                # Its a video
+                # If it's a mimetype of video, we will render thumbnails asynchronously
                 elif file_type == 'video':
-                    video_files.append(file)
-
-        with Pool() as pool:
-            results = pool.map(process_video, video_files)
-
-        for result in results:
-            if result is not None:
-                videos.append(result)
+                    videos.append([None,file])
 
         if self.widget['PreviewModeTextSel'].get()== 'Image':#images
             for i in range(len(images)):
@@ -2664,15 +2661,25 @@ class GUI(tk.Tk):
                 button.media_file = images[i][1]
                 self.bind_scroll_events(button, self.target_videos_mouse_wheel)
 
-            #self.target_media_canvas.configure(scrollregion = self.target_media_canvas.bbox("all"))
-            self.redraw_target_media_canvas()
-
         elif self.widget['PreviewModeTextSel'].get()=='Video':#videos
 
+            ratio = float(self.splash_image.shape[0]) / self.splash_image.shape[1]
+
+            new_height = 100
+            new_width = int(new_height / ratio)
+            placeholder_image = cv2.resize(self.splash_image, (new_width, new_height))
+            placeholder_image[:new_height, :new_width, :] = placeholder_image
+            
+            placeholder_thumbnail = ImageTk.PhotoImage(image=Image.fromarray(placeholder_image))
+
             for i in range(len(videos)):
+
+                image = videos[i][0]
+                has_thumbnail = True if image is not None else False
+
                 button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 190)
                 self.target_media_buttons.append(button)
-                self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(videos[i][0])))
+                self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(image)) if has_thumbnail else placeholder_thumbnail)
 
                 filename = os.path.basename(videos[i][1])
                 hovertip = RopeHovertip(button, filename, x_offset=190)
@@ -2682,8 +2689,10 @@ class GUI(tk.Tk):
                 self.bind_scroll_events(button, self.target_videos_mouse_wheel)
                 button.config(image = self.target_media[i], text=filename, compound='top', anchor='n',command=lambda i=i: self.load_target(videos[i][1], self.widget['PreviewModeTextSel'].get()))
                 button.media_file = videos[i][1]
+                button.has_thumbnail = has_thumbnail
 
-            self.redraw_target_media_canvas()
+        self.redraw_target_media_canvas()
+        self.render_thumbnail_for_visible_target_media_buttons()
 
     def redraw_target_media_canvas(self):
         # Clear all canvas items
@@ -2694,8 +2703,55 @@ class GUI(tk.Tk):
         # Re-add the items to the canvas, repositioning them as needed
         for i, button in enumerate(self.target_media_buttons):
             button.item_id = self.target_media_canvas.create_window(0, i*dely, window = self.target_media_buttons[i], anchor='nw')
+            button.canvas_index = i
 
         self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
+
+    def is_item_visible_in_canvas(self, canvas, item_id):
+        coords = canvas.bbox(item_id)
+        if coords:
+            x1, y1, x2, y2 = coords
+            
+            # Get the current scroll position 
+            scroll_y1, scroll_y2 = canvas.yview()
+
+            # Get the full height of the canvas and apply the scroll offset
+            canvas_height = canvas.bbox("all")[3] 
+            
+            # Calculate the vertical range of the visible area after scrolling
+            visible_y1 = scroll_y1 * canvas_height 
+            visible_y2 = scroll_y2 * canvas_height
+
+            # Check if any part of the item's bounding box overlaps with the visible area
+            if x2 >= 0 and y2 >= visible_y1 and x1 <= canvas.winfo_width() and y1 <= visible_y2:
+                return True
+
+        return False
+
+    def get_visible_buttons_in_canvas(self):
+
+        out_buttons = []
+        for button in self.target_media_buttons:
+            if self.is_item_visible_in_canvas(self.target_media_canvas, button.item_id):
+                out_buttons.append(button)
+
+        return out_buttons
+
+    def render_thumbnail_for_target_media_button(self, button):
+
+        if button.has_thumbnail:
+            return
+
+        frame = process_video(button.media_file)
+        thumbnail = ImageTk.PhotoImage(image=Image.fromarray(frame))
+        self.target_media[button.canvas_index] = thumbnail
+        button.config(image = thumbnail)
+        button.has_thumbnail = True
+
+    def render_thumbnail_for_visible_target_media_buttons(self):
+
+        for button in self.get_visible_buttons_in_canvas():
+            self.render_thumbnail_for_target_media_button(button)
 
     def toggle_auto_swap(self):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()

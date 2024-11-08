@@ -371,9 +371,10 @@ class Scrollbar_x():
         pass
 
 class Scrollbar_y():
-    def __init__(self, parent, child):
+    def __init__(self, parent, child, scroll_callback = None):
 
         self.child = child
+        self.scroll_callback = scroll_callback
 
         self.trough_short_dim = 15
         self.trough_long_dim = []
@@ -456,6 +457,9 @@ class Scrollbar_y():
         self.child.yview_moveto(handle_y1/self.trough_long_dim)
 
         self.old_coord = event.y
+
+        if self.scroll_callback and callable(self.scroll_callback):
+            self.scroll_callback()
 
     def set(self, value):
         handle_y1 = self.scrollbar_canvas.coords(self.middle_of_handle)[1]
