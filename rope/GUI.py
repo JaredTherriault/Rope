@@ -2536,7 +2536,8 @@ class GUI(tk.Tk):
                         tface['AssignedEmbedding'] = np.median(temp_holder, 0)
                     elif self.widget['MergeTextSel'].get() == 'Mean':
                         weighted_array = []
-                        if self.widget['ApplyFaceWeightsSwitch'].get() == True:
+                        # If multiple faces aren't selected, don't bother weighting
+                        if self.widget['ApplyFaceWeightsSwitch'].get() == True and len(temp_holder) > 1:
 
                             weight_list = [
                                 self.widget['FaceWeights0Slider'].get(), 
@@ -2546,7 +2547,7 @@ class GUI(tk.Tk):
                                 self.widget['FaceWeights4Slider'].get(),
                                 self.widget['FaceWeights5Slider'].get()]
 
-                            # If no weight difference, don't bother weighting
+                            # If there's no weight difference, don't bother weighting
                             if all(x == weight_list[0] for x in weight_list):
                                 weighted_array = temp_holder
                             else:
