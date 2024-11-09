@@ -2141,6 +2141,7 @@ class GUI(tk.Tk):
             new_source_face["TKButton"] = tk.Button(self.merged_faces_canvas, style.media_button_off_3, image=self.blank, text=button_text, height=14, width=text_width, compound='left', anchor='w')
 
             new_source_face["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=j: self.select_input_faces(event, arg))
+            new_source_face["TKButton"].bind("<ButtonRelease-3>", lambda event, arg=j: self.select_input_faces(event, arg))
             self.bind_scroll_events(new_source_face["TKButton"], lambda event, delta: self.merged_faces_canvas.xview_scroll(delta, "units"))
             new_source_face['TextWidth'] = text_width
             x_width = 20
@@ -2191,6 +2192,7 @@ class GUI(tk.Tk):
                 new_source_face["TKButton"] = tk.Button(self.merged_faces_canvas, style.media_button_off_3, image=self.blank, text=temp0[j][0], height=14, width=text_width, compound='left', anchor='w')
 
                 new_source_face["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=j: self.select_input_faces(event, arg))
+                new_source_face["TKButton"].bind("<ButtonRelease-3>", lambda event, arg=j: self.select_input_faces(event, arg))
                 self.bind_scroll_events(new_source_face["TKButton"], lambda event, delta: self.merged_faces_canvas.xview_scroll(delta, "units"))
                 new_source_face['TextWidth'] = text_width
                 x_width = 20
@@ -2272,7 +2274,8 @@ class GUI(tk.Tk):
                             self.source_faces[-1]["LockedButtonState"] = False
                             self.source_faces[-1]["file"] = file
 
-                            self.source_faces[-1]["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))
+                            self.source_faces[-1]["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))            
+                            self.source_faces[-1]["TKButton"].bind("<ButtonRelease-3>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))
                             self.bind_scroll_events(self.source_faces[-1]["TKButton"], self.source_faces_mouse_wheel)
 
                             self.source_faces_canvas.create_window((i % 3) * 65, (i // 3) * 65, window=self.source_faces[-1]["TKButton"], anchor='nw')
@@ -2418,11 +2421,16 @@ class GUI(tk.Tk):
                     gc.collect()
 
         try:
-            if event.state & 0x4 != 0:
-                modifier = 'ctrl'
-            elif event.state & 0x1 != 0:
-                modifier = 'shift'
-            elif event.state & 0x8 != 0:
+            if event.num == 1: # left click
+                if event.state & 0x4 != 0:
+                    modifier = 'ctrl'
+                elif event.state & 0x1 != 0:
+                    modifier = 'shift'
+                elif event.state & 0x8 != 0:
+                    modifier = 'alt'
+                else:
+                    modifier = 'none'
+            elif event.num == 3: # right click
                 modifier = 'alt'
             else:
                 modifier = 'none'
