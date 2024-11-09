@@ -1044,7 +1044,7 @@ class GUI(tk.Tk):
         button_frame.grid( row = 0, column = 0, )
 
         self.widget['FindFacesButton'] = GE.Button(button_frame, 'FindFaces', 2, self.on_click_find_faces_button, None, 'control', x=112, y=0, width=112, height=33)
-        self.widget['ClearFacesButton'] = GE.Button(button_frame, 'ClearFaces', 2, self.clear_faces, None, 'control', x=112, y=33, width=112, height=33)
+        self.widget['ClearFacesButton'] = GE.Button(button_frame, 'ClearFaces', 2, self.on_click_clear_faces_button, None, 'control', x=112, y=33, width=112, height=33)
         self.widget['SwapFacesButton'] = GE.Button(button_frame, 'SwapFaces', 2, self.toggle_swapper, None, 'control', x=0, y=0, width=112, height=33)
         self.widget['EditFacesButton'] = GE.Button(button_frame, 'EditFaces', 2, self.toggle_faces_editor, None, 'control', x=0, y=33, width=112, height=33)
         self.widget['EnhanceFrameButton'] = GE.Button(button_frame, 'EnhanceFrame', 2, self.toggle_enhancer, None, 'control', x=0, y=66, width=112, height=33)
@@ -2369,6 +2369,16 @@ class GUI(tk.Tk):
         self.target_faces = []
         self.found_faces_canvas.delete("all")
 
+    def on_click_clear_faces_button(self):
+
+        # Clears target faces and deselects all source faces, even locked ones
+
+        self.clear_faces()
+
+        self.clear_face_highlights(should_clear_button_state = True, should_clear_locked_button_state = True)
+
+        self.select_input_faces("same", "") # Clear highlights, remove previous face applications
+
     # toggle the target faces button and make assignments
     def toggle_found_faces_buttons_state(self, button):
         # Turn all Target faces off
@@ -2397,6 +2407,17 @@ class GUI(tk.Tk):
             button_style = style.media_button_on_lock_3 if is_locked else style.media_button_on_3
 
             self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["TKButton"].config(button_style)
+
+    def clear_face_highlights(self, should_clear_button_state = False, should_clear_locked_button_state = False):
+
+        for face in self.source_faces:
+            face["TKButton"].config(style.media_button_off_3)
+
+            # and also clear the states if not selecting multiples
+            if should_clear_button_state:
+                face["ButtonState"] = False
+            if should_clear_locked_button_state:
+                face["LockedButtonState"] = False
 
     def select_input_faces(self, event, button):
 
@@ -2440,19 +2461,11 @@ class GUI(tk.Tk):
         except:
             modifier = event
 
-        def clear_face_highlights(should_clear_button_state):
-            for face in self.source_faces:
-                face["TKButton"].config(style.media_button_off_3)
-
-                # and also clear the states if not selecting multiples
-                if should_clear_button_state:
-                    face["ButtonState"] = False
-
         # If autoswap isnt on
         # Clear all the highlights. Clear all states, excpet if a modifier is being used
         # Start by turning off all the highlights on the input faces buttons
         if modifier != 'same' and modifier != 'random' and modifier != 'merge':
-            clear_face_highlights(modifier == 'none')
+            self.clear_face_highlights(modifier == 'none')
 
             # Toggle the state of the selected Input Face
             face_locked = "LockedButtonState" in self.source_faces[button] and self.source_faces[button]["LockedButtonState"] == True
@@ -2496,7 +2509,7 @@ class GUI(tk.Tk):
             higlight_selected_faces(button)
             
         if modifier == 'random':
-            clear_face_highlights(True)
+            self.clear_face_highlights(True)
             face_count = len(self.source_faces)
             random_index = randint(0, face_count - 1)
             self.source_faces[random_index]["ButtonState"] = True
