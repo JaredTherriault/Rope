@@ -863,6 +863,9 @@ class GUI(tk.Tk):
 
         self.static_widget['input_videos_scrollbar'] = GE.Scrollbar_y(scroll_canvas, self.target_media_canvas)
 
+        # Hijack the mouse motion binding
+        scroll_canvas.bind("<B1-Motion>", self.on_input_videos_scrollbar_mouse_motion)
+
       # Input Faces
         # Button Frame
         frame = tk.Frame(self.layer['InputVideoFrame'], style.canvas_frame_label_2, height = 42)
@@ -1794,7 +1797,7 @@ class GUI(tk.Tk):
         center = center+self.target_media_canvas.yview()[0]
         self.static_widget['input_videos_scrollbar'].set(center)
 
-        self.render_thumbnail_for_visible_target_media_buttons()
+        self.render_thumbnails_for_visible_target_media_buttons()
 
     def parameters_mouse_wheel(self, event, delta = 0):
         self.parameters_canvas.yview_scroll(delta, "units")
@@ -2668,6 +2671,7 @@ class GUI(tk.Tk):
                 button.config( image = self.target_media[i],  command=lambda i=i: self.load_target(images[i][1], self.widget['PreviewModeTextSel'].get()))
                 button.media_file = images[i][1]
                 self.bind_scroll_events(button, self.target_videos_mouse_wheel)
+                button.has_thumbnail = True
 
         elif self.widget['PreviewModeTextSel'].get()=='Video':#videos
 
@@ -2700,7 +2704,7 @@ class GUI(tk.Tk):
                 button.has_thumbnail = has_thumbnail
 
         self.redraw_target_media_canvas()
-        self.render_thumbnail_for_visible_target_media_buttons()
+        self.render_thumbnails_for_visible_target_media_buttons()
 
     def redraw_target_media_canvas(self):
         # Clear all canvas items
@@ -2756,10 +2760,21 @@ class GUI(tk.Tk):
         button.config(image = thumbnail)
         button.has_thumbnail = True
 
-    def render_thumbnail_for_visible_target_media_buttons(self):
+        if frame is not None:
+            thumbnail = ImageTk.PhotoImage(image=Image.fromarray(frame))
+            self.target_media[button.canvas_index] = thumbnail
+            button.config(image = thumbnail)
+            button.has_thumbnail = True
 
-        for button in self.get_visible_buttons_in_canvas():
-            self.render_thumbnail_for_target_media_button(button)
+    def render_thumbnails_for_visible_target_media_buttons(self, delay=0):
+
+        for i, button in enumerate(self.get_visible_buttons_in_canvas()):
+            self.after(i * delay, self.render_thumbnail_for_target_media_button, button)
+
+    def on_input_videos_scrollbar_mouse_motion(self, event):
+
+        self.static_widget['input_videos_scrollbar'].scroll(event)
+        self.render_thumbnails_for_visible_target_media_buttons()
 
     def toggle_auto_swap(self):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
