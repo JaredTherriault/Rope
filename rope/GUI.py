@@ -2755,10 +2755,6 @@ class GUI(tk.Tk):
             return
 
         frame = process_video(button.media_file)
-        thumbnail = ImageTk.PhotoImage(image=Image.fromarray(frame))
-        self.target_media[button.canvas_index] = thumbnail
-        button.config(image = thumbnail)
-        button.has_thumbnail = True
 
         if frame is not None:
             thumbnail = ImageTk.PhotoImage(image=Image.fromarray(frame))
