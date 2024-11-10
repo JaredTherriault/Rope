@@ -75,7 +75,8 @@ class GUI(tk.Tk):
         self.video_image = []
         self.video_loaded = False
         self.image_loaded = False
-        self.image_file_name = []
+        self.media_file = []
+        self.media_file_name = []
         self.stop_marker = []
         self.stop_image = []
         self.stop_marker_icon = []
@@ -84,6 +85,7 @@ class GUI(tk.Tk):
         self.output_folder = []
         self.output_videos_text = []
         self.target_media_buttons = []
+        self.all_target_media_thumbnails_generated = False
         self.input_videos_button = []
         self.input_videos_text = []
         self.target_media_canvas = []
@@ -100,6 +102,7 @@ class GUI(tk.Tk):
         self.me_name = []
         self.merged_faces_canvas = []
         self.parameters = {}
+        self.scroll_timeout = []
         # Face Editor
         self.parameters_face_editor = {}
         self.control = {}
@@ -2717,6 +2720,7 @@ class GUI(tk.Tk):
                 button.media_file = videos[i][1]
                 button.has_thumbnail = has_thumbnail
 
+        self.all_target_media_thumbnails_generated = False
         self.redraw_target_media_canvas()
         self.render_thumbnails_for_visible_target_media_buttons()
 
@@ -2754,12 +2758,29 @@ class GUI(tk.Tk):
 
         return False
 
-    def get_visible_buttons_in_canvas(self):
+    def get_visible_target_media_buttons(self):
 
         out_buttons = []
-        for button in self.target_media_buttons:
+        has_found_visible = False
+
+        _, view_y2 = self.target_media_canvas.yview()
+        button_count = len(self.target_media_buttons)
+
+        # Multiply scroll amount by button count to get an index to start with
+        # then offset it to start a bit before that point and clamp it to min 0
+        start_index = max(0, int(button_count * view_y2) - 20)
+
+        for i in range(start_index, button_count):
+            button = self.target_media_buttons[i]
             if self.is_item_visible_in_canvas(self.target_media_canvas, button.item_id):
                 out_buttons.append(button)
+                has_found_visible = True
+            elif has_found_visible:
+                # Visible target media wil be contiguous,
+                # so if we've found some visible media
+                # but this iteration doesn't return visible,
+                # we're not going to find anymore visible items
+                break
 
         return out_buttons
 
@@ -2776,15 +2797,53 @@ class GUI(tk.Tk):
             button.config(image = thumbnail)
             button.has_thumbnail = True
 
-    def render_thumbnails_for_visible_target_media_buttons(self, delay=0):
+    def render_thumbnails_for_visible_target_media_buttons(self):
 
-        for i, button in enumerate(self.get_visible_buttons_in_canvas()):
-            self.after(i * delay, self.render_thumbnail_for_target_media_button, button)
+        for button in self.get_visible_target_media_buttons():
+            self.render_thumbnail_for_target_media_button(button)
+
+    def render_thumbnails_for_all_target_media_buttons(self):
+
+        for button in self.target_media_buttons:
+            self.render_thumbnail_for_target_media_button(button)
+
+        self.all_target_media_thumbnails_generated = True
 
     def on_input_videos_scrollbar_mouse_motion(self, event):
 
-        self.static_widget['input_videos_scrollbar'].scroll(event)
-        self.render_thumbnails_for_visible_target_media_buttons()
+        if event is not None:
+            self.static_widget['input_videos_scrollbar'].scroll(event)
+
+        if self.all_target_media_thumbnails_generated == True:
+            return
+
+        if self.scroll_timeout:
+            self.after_cancel(self.scroll_timeout)
+
+        def is_scrolled_to_max_y(canvas):
+            # Get the bounding box of all items on the canvas (x1, y1, x2, y2)
+            bbox = canvas.bbox("all")
+            
+            # Get the current vertical scroll position (fractional values)
+            _, curr_y1, _, curr_y2 = canvas.bbox("all")
+            _, view_y2 = canvas.yview()
+            
+            if bbox is None:
+                return False
+
+            # Get the height of the canvas viewport
+            canvas_height = canvas.winfo_height()
+
+            # Check if the current scroll position is at the bottom
+            if view_y2 == 1.0:  # 1.0 means the scrollbar is at the bottom
+                return True
+            return False
+
+        # Scroll to bottom and let it time out to load all thumbnails immediately
+        if is_scrolled_to_max_y(self.target_media_canvas):
+            self.scroll_timeout = self.after(1000, self.render_thumbnails_for_all_target_media_buttons)
+        else:
+            self.scroll_timeout = self.after(350, self.render_thumbnails_for_visible_target_media_buttons)
 
     def toggle_auto_swap(self):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
@@ -3493,7 +3552,7 @@ class GUI(tk.Tk):
             self.stop_image = self.video_slider_canvas.create_image(position, 30, image=self.stop_marker_icon)
 
     def save_image(self):
-        if hasattr(self, "media_file_name") and len(self.media_file_name) > 0:
+        if len(self.media_file_name) > 0:
             filename =  self.media_file_name[0]+"_"+str(time.time())[:10]
             filename = os.path.join(self.json_dict["saved videos"], filename)
             cv2.imwrite(filename+'.png', cv2.cvtColor(self.video_image, cv2.COLOR_BGR2RGB))
@@ -3551,24 +3610,23 @@ class GUI(tk.Tk):
             button.button.config(text="Delete Media")
 
     def on_click_delete_media_button(self):
-        if hasattr(self, "media_file"):
 
-            button = self.widget['DeleteMediaButton']
+        button = self.widget['DeleteMediaButton']
 
-            if not button:
-                return
+        if not button:
+            return
 
-            if button.state == False:
-                self.set_delete_media_button_confirm_message_state(True)
+        if button.state == False:
+            self.set_delete_media_button_confirm_message_state(True)
 
-            else:
-                if os.path.exists(self.media_file):
+        else:
+            if os.path.exists(self.media_file):
 
-                    path = self.media_file
-                    self.select_next_target_media()
-                    self.delete_target_media(path)
+                path = self.media_file
+                self.select_next_target_media()
+                self.delete_target_media(path)
 
-                    self.set_delete_media_button_confirm_message_state(False)
+                self.set_delete_media_button_confirm_message_state(False)
 
     def clear_mem(self):
         self.widget['RestorerSwitch'].set(False)
@@ -3663,7 +3721,7 @@ class GUI(tk.Tk):
 
     def select_adjacent_target_media(self, offset : int):
 
-        if not hasattr(self, 'media_file') or not self.media_file:
+        if not self.media_file:
             return
 
         new_index = self.find_currently_selected_target_media_index()
