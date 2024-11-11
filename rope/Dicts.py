@@ -733,37 +733,37 @@ DEFAULT_DATA = {
 'FaceWeights0SliderAmount':       10,
 'FaceWeights0SliderInc':          1,
 'FaceWeights0SliderInfoText':     'FACE 0 WEIGHT:\nSpecifies a weight for the first selected face in a live merged embedding.',
-'FaceWeights0SliderMax':          40,
+'FaceWeights0SliderMax':          50,
 'FaceWeights0SliderMin':          1,
 
 'FaceWeights1SliderAmount':       10,
 'FaceWeights1SliderInc':          1,
 'FaceWeights1SliderInfoText':     'FACE 1 WEIGHT:\nSpecifies a weight for the second selected face in a live merged embedding.',
-'FaceWeights1SliderMax':          40,
+'FaceWeights1SliderMax':          50,
 'FaceWeights1SliderMin':          1,
 
 'FaceWeights2SliderAmount':       10,
 'FaceWeights2SliderInc':          1,
 'FaceWeights2SliderInfoText':     'FACE 2 WEIGHT:\nSpecifies a weight for the third selected face in a live merged embedding.',
-'FaceWeights2SliderMax':          40,
+'FaceWeights2SliderMax':          50,
 'FaceWeights2SliderMin':          1,
 
 'FaceWeights3SliderAmount':       10,
 'FaceWeights3SliderInc':          1,
 'FaceWeights3SliderInfoText':     'FACE 3 WEIGHT:\nSpecifies a weight for the fourth selected face in a live merged embedding.',
-'FaceWeights3SliderMax':          40,
+'FaceWeights3SliderMax':          50,
 'FaceWeights3SliderMin':          1,
 
 'FaceWeights4SliderAmount':       10,
 'FaceWeights4SliderInc':          1,
 'FaceWeights4SliderInfoText':     'FACE 4 WEIGHT:\nSpecifies a weight for the fifth selected face in a live merged embedding.',
-'FaceWeights4SliderMax':          40,
+'FaceWeights4SliderMax':          50,
 'FaceWeights4SliderMin':          1,
 
 'FaceWeights5SliderAmount':       10,
 'FaceWeights5SliderInc':          1,
 'FaceWeights5SliderInfoText':     'FACE 5 WEIGHT:\nSpecifies a weight for the sixth selected face in a live merged embedding.',
-'FaceWeights5SliderMax':          40,
+'FaceWeights5SliderMax':          50,
 'FaceWeights5SliderMin':          1,
 
 # Text Selection
