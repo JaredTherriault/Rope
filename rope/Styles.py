@@ -99,6 +99,16 @@ entry_2 = {
     'font':                     ("Segoe UI", 9)
     }
 
+entry_search = {
+    'bg':                       '#1F1F1F',
+    'fg':                       '#FFFFFF',
+    'relief':                   'flat',
+    'border':                   '1',
+    'highlightthickness':        '1',
+    'highlightbackground':        '#17181A',
+    'font':                     ("Segoe UI", 9)
+    }
+
 text_selection_off_3 = {
     'bg':                       main,
     'fg':                       '#7A7A7A',

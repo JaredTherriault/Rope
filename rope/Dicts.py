@@ -870,6 +870,10 @@ DEFAULT_DATA = {
 'CLIPTextEntry':    '',
 'CLIPTextEntryInfoText':            'TEXT MASKING ENTRY:\nTo use, type a word(s) in the box separated by commas and press <enter>.',
 
+# Text Entry
+'FacesSearchBarTextEntry':    '',
+'FacesSearchBarTextEntryInfoText':  'FACES SEARCH:\nFilter out any faces whose paths don\'t match the search string',
+
 # Face Editor
 'FaceEditorTypeTextSelInfoText':   'Face Editor Type:\nSelect the target type to be edited in Face Editor.',
 'FaceEditorTypeTextSelMode':       'Human-Face',

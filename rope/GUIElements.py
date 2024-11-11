@@ -1757,6 +1757,56 @@ class Text_Entry():
     def load_default(self):
         pass
 
+class Text_Entry_Search(Text_Entry):
+    def __init__(self, parent, name, display_text, style_level, function, data_type, row, column, padx, pady):
+        self.blank = tk.PhotoImage()
+
+        self.default_data = DEFAULT_DATA
+        # Capture inputs as instance variables
+        self.parent = parent
+        self.name = name
+        self.function = function
+        self.data_type = data_type
+        self.style = []
+        self.info = []
+        self.row = row
+        self.column = column
+        self.visible = True
+        self.is_resizing = False
+
+        if style_level == 3:
+            self.frame_style = style.canvas_frame_label_3
+            self.text_style = style.text_3
+            self.sel_off_style = style.text_selection_off_3
+            self.sel_on_style = style.text_selection_on_3
+
+        if style_level == 2:
+            self.frame_style = style.canvas_frame_label_2
+            self.text_style = style.text_2
+            self.sel_off_style = style.text_selection_off_2
+            self.sel_on_style = style.text_selection_on_2
+
+        self.display_text = display_text+' '
+
+        # Initial data
+        self.entry_text = tk.StringVar()
+        self.entry_text.set(self.default_data[self.name])
+
+        # Frame to hold everything
+        self.frame = tk.Frame(self.parent, self.frame_style)
+        self.frame.grid(row=row, column=column, sticky='news', padx=padx, pady=pady)
+        self.frame.grid_columnconfigure(0, weight=0)
+        self.frame.grid_columnconfigure(1, weight=1)
+        self.frame.bind("<Enter>", lambda event: self.on_enter())
+
+        # Create the text on the left
+        self.text_label = tk.Label(self.frame, self.text_style, image=self.blank, compound='c', text=self.display_text, anchor='e')
+        self.text_label.grid(row=0, column=0, sticky='w', padx=0, pady=0)
+
+        self.entry = tk.Entry(self.frame, style.entry_search, textvariable=self.entry_text)
+        self.entry.grid(row=0, column=1, sticky='news', padx=8, pady=0)
+        self.entry.bind("<Return>", lambda event: self.send_text(self.entry_text.get()))
+
 class VRAM_Indicator:
     def __init__(self, parent, style_level, width, height, x, y):
         self.parent = parent
