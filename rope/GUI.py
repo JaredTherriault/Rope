@@ -134,11 +134,22 @@ class GUI(tk.Tk):
                             "Image":                    [],
                             "Embedding":                [],
                             "SourceFaceAssignments":    [],
-                            "EmbeddingNumber":          0,       #used for adding additional found faces
+                            "EmbeddingNumber":          0,      #used for adding additional found faces
                             'AssignedEmbedding':        [],     #the currently assigned source embedding, including averaged ones
                             'DFLModel':                 False,
                             }
         self.target_faces = []
+
+        self.selected_source_face = {
+                            "TKButton":                 [],
+                            "ButtonState":              "off",
+                            "Image":                    [],
+                            "Embedding":                [],   
+                            "EmbeddingWeight":          [],
+                            'DFLModel':                 False,
+                            "ButtonText":               [],
+                            }
+        self.selected_source_faces = []
 
         self.source_face =  {
                             "TKButton":                 [],
@@ -146,6 +157,8 @@ class GUI(tk.Tk):
                             "Image":                    [],
                             "Embedding":                [],
                             'DFLModel':                 False,
+                            "ButtonText":               [],
+                            "Size":                     [],
                             }
         self.source_faces = []
 
@@ -1040,6 +1053,7 @@ class GUI(tk.Tk):
         ff_frame.grid(row=6, column=0, sticky='NEWS', pady=1)
         ff_frame.grid_columnconfigure(0, weight=0)
         ff_frame.grid_columnconfigure(1, weight=1)
+        ff_frame.grid_columnconfigure(2, weight=1)
         ff_frame.grid_rowconfigure(0, weight=0)
 
         # Buttons
@@ -1047,7 +1061,7 @@ class GUI(tk.Tk):
         button_frame.grid( row = 0, column = 0, )
 
         self.widget['FindFacesButton'] = GE.Button(button_frame, 'FindFaces', 2, self.on_click_find_faces_button, None, 'control', x=112, y=0, width=112, height=33)
-        self.widget['ClearFacesButton'] = GE.Button(button_frame, 'ClearFaces', 2, self.on_click_clear_faces_button, None, 'control', x=112, y=33, width=112, height=33)
+        self.widget['ClearFacesButton'] = GE.Button(button_frame, 'ClearFaces', 2, self.on_click_clear_target_faces_button, None, 'control', x=112, y=33, width=112, height=33)
         self.widget['SwapFacesButton'] = GE.Button(button_frame, 'SwapFaces', 2, self.toggle_swapper, None, 'control', x=0, y=0, width=112, height=33)
         self.widget['EditFacesButton'] = GE.Button(button_frame, 'EditFaces', 2, self.toggle_faces_editor, None, 'control', x=0, y=33, width=112, height=33)
         self.widget['EnhanceFrameButton'] = GE.Button(button_frame, 'EnhanceFrame', 2, self.toggle_enhancer, None, 'control', x=0, y=66, width=112, height=33)
@@ -1057,6 +1071,11 @@ class GUI(tk.Tk):
         self.found_faces_canvas.grid( row = 0, column = 1, sticky='NEWS')
         self.bind_scroll_events(self.found_faces_canvas, self.target_faces_mouse_wheel)
         self.found_faces_canvas.create_text(8, 45, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Found Faces")
+
+        self.selected_source_faces_canvas = tk.Canvas(ff_frame, style.canvas_frame_label_3, height = 100 )
+        self.selected_source_faces_canvas.grid( row = 0, column = 2, sticky='NEWS')
+        self.bind_scroll_events(self.selected_source_faces_canvas, self.selected_source_faces_mouse_wheel)
+        self.selected_source_faces_canvas.create_text(8, 45, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Currently Selected Source Faces")
 
         self.static_widget['23'] = GE.Separator_y(ff_frame, 111, 0)
 
@@ -1517,17 +1536,17 @@ class GUI(tk.Tk):
         row = row + 1
         self.widget['ApplyFaceWeightsSwitch'] = GE.Switch2(self.layer['parameters_frame'], 'ApplyFaceWeightsSwitch', 'Apply Face Weights', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady)
         row = row + 1
-        self.widget['FaceWeights0Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights0Slider', 'Face0', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        self.widget['FaceWeights0Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights0Slider', 'Face0 Default', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
         row = row + 1
-        self.widget['FaceWeights1Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights1Slider', 'Face1', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        self.widget['FaceWeights1Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights1Slider', 'Face1 Default', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
         row = row + 1
-        self.widget['FaceWeights2Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights2Slider', 'Face2', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        self.widget['FaceWeights2Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights2Slider', 'Face2 Default', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
         row = row + 1
-        self.widget['FaceWeights3Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights3Slider', 'Face3', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        self.widget['FaceWeights3Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights3Slider', 'Face3 Default', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
         row = row + 1
-        self.widget['FaceWeights4Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights4Slider', 'Face4', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        self.widget['FaceWeights4Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights4Slider', 'Face4 Default', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
         row = row + 1
-        self.widget['FaceWeights5Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights5Slider', 'Face5', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
+        self.widget['FaceWeights5Slider'] = GE.Slider2(self.layer['parameters_frame'], 'FaceWeights5Slider', 'Face5 Default', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.72)
     
         ### Face Editor ###
         row = 1
@@ -1730,7 +1749,7 @@ class GUI(tk.Tk):
                             # Clear all of the assignments
                             face["SourceFaceAssignments"] = []
                     # Clear all faces
-                    self.clear_faces()
+                    self.clear_target_faces()
                     # reload input faces
                     self.load_input_faces()
             elif name == "ProvidersPriorityTextSel":
@@ -1783,6 +1802,9 @@ class GUI(tk.Tk):
 
     def target_faces_mouse_wheel(self, event, delta = 0):
         self.found_faces_canvas.xview_scroll(delta, "units")
+
+    def selected_source_faces_mouse_wheel(self, event, delta = 0):
+        self.selected_source_faces_canvas.xview_scroll(delta, "units")
 
     def source_faces_mouse_wheel(self, event, delta=0):
         self.source_faces_canvas.yview_scroll(delta, "units")
@@ -2192,10 +2214,11 @@ class GUI(tk.Tk):
                 new_source_face["ButtonState"] = False
                 new_source_face["LockedButtonState"] = False
                 new_source_face["Embedding"] = temp0[j][1]
+                new_source_face["ButtonText"] = temp0[j][0]
 
                 text_width = text_font.measure('ABCDEFGHIJKLMNO')
 
-                new_source_face["TKButton"] = tk.Button(self.merged_faces_canvas, style.media_button_off_3, image=self.blank, text=temp0[j][0], height=14, width=text_width, compound='left', anchor='w')
+                new_source_face["TKButton"] = tk.Button(self.merged_faces_canvas, style.media_button_off_3, image=self.blank, text=new_source_face["ButtonText"], height=14, width=text_width, compound='left', anchor='w')
 
                 new_source_face["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=j: self.select_input_faces(event, arg))
                 new_source_face["TKButton"].bind("<ButtonRelease-3>", lambda event, arg=j: self.select_input_faces(event, arg))
@@ -2275,10 +2298,11 @@ class GUI(tk.Tk):
 
                             self.source_faces[-1]["Image"] = ImageTk.PhotoImage(image=Image.fromarray(crop))
                             self.source_faces[-1]["Embedding"] = face_emb
-                            self.source_faces[-1]["TKButton"] = tk.Button(self.source_faces_canvas, style.media_button_off_3, image=self.source_faces[-1]["Image"], height=55, width=55)
+                            self.source_faces[-1]["Size"] = 55
+                            self.source_faces[-1]["TKButton"] = tk.Button(self.source_faces_canvas, style.media_button_off_3, image=self.source_faces[-1]["Image"], height=self.source_faces[-1]["Size"], width=self.source_faces[-1]["Size"])
                             self.source_faces[-1]["ButtonState"] = False
                             self.source_faces[-1]["LockedButtonState"] = False
-                            self.source_faces[-1]["file"] = file
+                            self.source_faces[-1]["File"] = file
 
                             self.source_faces[-1]["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))            
                             self.source_faces[-1]["TKButton"].bind("<ButtonRelease-3>", lambda event, arg=len(self.source_faces)-1: self.select_input_faces(event, arg))
@@ -2297,7 +2321,7 @@ class GUI(tk.Tk):
     def on_click_find_faces_button(self):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
         if auto_swap_state != "off":
-            self.clear_faces()
+            self.clear_target_faces()
             self.auto_swap()
         else:
             self.find_faces()
@@ -2368,11 +2392,19 @@ class GUI(tk.Tk):
 
                         self.found_faces_canvas.configure(scrollregion = self.found_faces_canvas.bbox("all"))
 
-    def clear_faces(self):
+    def clear_target_faces(self):
         self.target_faces = []
         self.found_faces_canvas.delete("all")
 
-    def on_click_clear_faces_button(self):
+    def clear_selected_source_faces(self):
+        self.selected_source_faces = []
+        self.selected_source_faces_canvas.delete("all")
+
+    def clear_faces(self):
+        self.clear_target_faces()
+        self.clear_selected_source_faces()
+
+    def on_click_clear_target_faces_button(self):
 
         # Clears target faces and deselects all source faces, even locked ones
 
@@ -2394,6 +2426,7 @@ class GUI(tk.Tk):
         self.target_faces[button]["TKButton"].config(style.media_button_on_3)
 
         # set all source face buttons to off (unless locked)
+        self.clear_selected_source_faces()
         for i in range(len(self.source_faces)):
             face_locked = "LockedButtonState" in self.source_faces[i] and self.source_faces[i]["LockedButtonState"] == True
             if not face_locked:
@@ -2410,6 +2443,8 @@ class GUI(tk.Tk):
             button_style = style.media_button_on_lock_3 if is_locked else style.media_button_on_3
 
             self.source_faces[self.target_faces[button]["SourceFaceAssignments"][i]]["TKButton"].config(button_style)
+
+        self.select_input_faces("same","")
 
     def clear_face_highlights(self, should_clear_button_state = False, should_clear_locked_button_state = False):
 
@@ -2436,7 +2471,7 @@ class GUI(tk.Tk):
                         face["TKButton"].config(style.media_button_on_3)
                         
                     if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
-                        self.add_action("load_target_image", face["file"])
+                        self.add_action("load_target_image", face["File"])
                         self.image_loaded = True
 
                 # Clear DFL models from memory
@@ -2446,6 +2481,210 @@ class GUI(tk.Tk):
                             del self.models.dfl_models[model]._sess
                             del self.models.dfl_models[model]
                     gc.collect()
+
+        def get_default_face_weights():
+            return [
+                self.widget['FaceWeights0Slider'].get(), 
+                self.widget['FaceWeights1Slider'].get(), 
+                self.widget['FaceWeights2Slider'].get(),
+                self.widget['FaceWeights3Slider'].get(),
+                self.widget['FaceWeights4Slider'].get(),
+                self.widget['FaceWeights5Slider'].get()]
+
+        def add_selected_face_to_selected_faces_canvas(face, default_weight_list = [], weight_cache = {}):
+
+            if len(self.selected_source_faces) > 0:
+                if "File" in face or "ButtonText" in face:
+                    for selected_face in self.selected_source_faces:
+                        if selected_face["File"] == (face["File"] if "File" in face else face["ButtonText"]):
+                            return selected_face
+
+            new_target_face = self.selected_source_face.copy()
+            self.selected_source_faces.append(new_target_face)
+            last_index = len(self.selected_source_faces) - 1
+
+            # button size (55x55)
+            size = 55
+
+            button = tk.Button(
+                self.selected_source_faces_canvas,
+                style.media_button_off_3,
+                height=size, 
+                width=size,
+                image=self.blank, 
+                text="",  # Initially no text for the button
+            )
+            button.config(font=("Arial", 1))
+            self.selected_source_faces[last_index]["TKButton"] = button
+
+            if "File" in face:
+                self.selected_source_faces[last_index]["File"] = face["File"]
+            else:
+                self.selected_source_faces[last_index]["File"] = face["ButtonText"]
+            self.selected_source_faces[last_index]["Embedding"] = face["Embedding"]
+
+            def get_embedding_weight():
+                embedding_weight = 10
+                if self.selected_source_faces[last_index]["File"] in weight_cache:
+                    embedding_weight = weight_cache[self.selected_source_faces[last_index]["File"]]
+                elif len(default_weight_list) > last_index:
+                    embedding_weight = default_weight_list[last_index]
+                self.selected_source_faces[last_index]["EmbeddingWeight"] = embedding_weight
+
+            get_embedding_weight()
+
+            entry = tk.Entry(
+                self.selected_source_faces_canvas, 
+                font=("Arial", 8),
+                width=int(size / 12)
+            )
+            self.selected_source_faces[last_index]["Entry"] = entry
+            entry.insert(0, str(self.selected_source_faces[last_index]["EmbeddingWeight"])) 
+            entry.grid(row=0, column=0)
+            def update_entry_text():
+                entry.delete(0, tk.END)
+                entry.insert(0, str(self.selected_source_faces[last_index]["EmbeddingWeight"])) 
+            def on_update_entry(event):
+                try:
+                    new_value = int(entry.get())
+                    self.selected_source_faces[last_index]["EmbeddingWeight"] = new_value
+                    assign_embeddings_to_target_face(False)
+                except:
+                    update_entry_text()
+            entry.bind("<FocusOut>", on_update_entry)
+            entry.bind("<Return>", on_update_entry)
+
+            # Bind events and set initial button state
+            def on_selected_face_scroll(event, delta):
+                new_weight = max(0, self.selected_source_faces[last_index]["EmbeddingWeight"] - int(delta))
+                self.selected_source_faces[last_index]["EmbeddingWeight"] = new_weight
+                update_entry_text()
+                assign_embeddings_to_target_face(False)
+
+            def on_selected_face_left_click(event):
+                get_embedding_weight()
+                update_entry_text()
+                assign_embeddings_to_target_face(False)
+
+            def on_selected_face_right_click(event):
+                face_index = self.source_faces.index(face)
+                if face_index > -1:
+                    self.select_input_faces(event, face_index)
+
+            self.bind_scroll_events(button, on_selected_face_scroll)
+            button.bind("<ButtonRelease-1>", on_selected_face_left_click)            
+            button.bind("<ButtonRelease-3>", on_selected_face_right_click)
+            self.selected_source_faces[last_index]["ButtonState"] = False
+
+            # Add image or text to button
+            face_image = face["Image"]
+            if isinstance(face_image, list):
+                button.config(
+                    text=f"{face['ButtonText']}", 
+                    compound='center', 
+                    anchor='center',  # Align text in the center
+                    wraplength=size,   # Limit text to fit within button size
+                    padx=0, pady=0
+                )
+            else:
+                # If using an image, ensure it's resized to fit within the button
+                self.selected_source_faces[last_index]["Image"] = face_image
+                button.config(image=self.selected_source_faces[last_index]["Image"])
+
+            # Add both button and entry to canvas
+            pad_x = 6
+            button_x = (last_index) * (size + pad_x)
+            button_window = self.selected_source_faces_canvas.create_window(
+                button_x, 
+                8, 
+                window=button, 
+                anchor='center'
+            )
+            
+            entry_window = self.selected_source_faces_canvas.create_window(
+                button_x,  # Same X position as the button
+                size,  # Position entry below the button
+                window=entry, 
+                anchor='center'
+            )
+
+            # Update canvas scroll region
+            self.selected_source_faces_canvas.configure(scrollregion=self.selected_source_faces_canvas.bbox("all"))
+
+            return self.selected_source_faces[last_index]
+
+        def cache_selected_face_weights():
+
+            weight_dict = {}
+
+            for face in self.selected_source_faces:
+
+                if "File" in face:
+                    weight_dict[face["File"]] = face["EmbeddingWeight"]
+
+            return weight_dict
+
+        def assign_embeddings_to_target_face(clear_selected_source_faces = True):
+            default_weight_list = get_default_face_weights()
+            for tface in self.target_faces:
+                if tface["ButtonState"]:
+                    # Clear all of the assignments
+                    tface["SourceFaceAssignments"] = []
+                    tface['DFLModel'] = False
+
+                    cached_weights = cache_selected_face_weights()
+
+                    if clear_selected_source_faces:
+                        self.clear_selected_source_faces()
+
+                    # Iterate through all Input faces
+                    temp_holder = []
+                    for j in range(len(self.source_faces)):
+
+                        # If the source face is active
+                        face_locked = "LockedButtonState" in self.source_faces[j] and self.source_faces[j]["LockedButtonState"] == True
+                        if self.source_faces[j]["ButtonState"] or face_locked:
+                            tface["SourceFaceAssignments"].append(j)
+                            selected_face = add_selected_face_to_selected_faces_canvas(self.source_faces[j], default_weight_list, cached_weights)
+                            # Only append embedding if it is not a DFL model
+                            if not self.source_faces[j]['DFLModel']:
+                                temp_holder.append(selected_face['Embedding'])
+
+                            if self.source_faces[j]['DFLModel']:
+                                # Clear DFL models from memory
+                                if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
+                                    for model in list(self.models.dfl_models):
+                                        del self.models.dfl_models[model]._sess
+                                        del self.models.dfl_models[model]
+                                    gc.collect()
+                                tface['DFLModel'] = self.source_faces[j]['DFLModel']
+
+                    # do averaging
+                    if temp_holder:
+                        if self.widget['MergeTextSel'].get() == 'Median':
+                            tface['AssignedEmbedding'] = np.median(temp_holder, 0)
+                        elif self.widget['MergeTextSel'].get() == 'Mean':
+                            weighted_array = []
+                            # If multiple faces aren't selected, don't bother weighting
+                            if self.widget['ApplyFaceWeightsSwitch'].get() == True and len(temp_holder) > 1:
+
+                                for i in range(len(temp_holder)):
+                                    weighted_array.extend([temp_holder[i]] * self.selected_source_faces[i]["EmbeddingWeight"])
+                                    
+                            else:
+                                weighted_array = temp_holder
+                            tface['AssignedEmbedding'] = np.mean(weighted_array, 0)
+
+                        self.temp_emb = tface['AssignedEmbedding']
+                    else:
+                        tface['AssignedEmbedding'] = []
+
+                        # for k in range(512):
+                        #     self.widget['emb_vec_' + str(k)].set(tface['AssignedEmbedding'][k], False)
+                    break
+
+            self.add_action("target_faces", self.target_faces)
+            self.add_action('get_requested_video_frame', self.video_slider.get())
 
         try:
             if event.num == 1: # left click
@@ -2518,71 +2757,8 @@ class GUI(tk.Tk):
             self.source_faces[random_index]["ButtonState"] = True
             higlight_selected_faces(random_index)
 
-        # Assign all active input faces to the active target face
-        for tface in self.target_faces:
-            if tface["ButtonState"]:
-                # Clear all of the assignments
-                tface["SourceFaceAssignments"] = []
-                tface['DFLModel'] = False
+        assign_embeddings_to_target_face()
 
-                # Iterate through all Input faces
-                temp_holder = []
-                for j in range(len(self.source_faces)):
-
-                    # If the source face is active
-                    face_locked = "LockedButtonState" in self.source_faces[j] and self.source_faces[j]["LockedButtonState"] == True
-                    if self.source_faces[j]["ButtonState"] or face_locked:
-                        tface["SourceFaceAssignments"].append(j)
-                        # Only append embedding if it is not a DFL model
-                        if not self.source_faces[j]['DFLModel']:
-                            temp_holder.append(self.source_faces[j]['Embedding'])
-
-                        if self.source_faces[j]['DFLModel']:
-                            # Clear DFL models from memory
-                            if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
-                                for model in list(self.models.dfl_models):
-                                    del self.models.dfl_models[model]._sess
-                                    del self.models.dfl_models[model]
-                                gc.collect()
-                            tface['DFLModel'] = self.source_faces[j]['DFLModel']
-
-                # do averaging
-                if temp_holder:
-                    if self.widget['MergeTextSel'].get() == 'Median':
-                        tface['AssignedEmbedding'] = np.median(temp_holder, 0)
-                    elif self.widget['MergeTextSel'].get() == 'Mean':
-                        weighted_array = []
-                        # If multiple faces aren't selected, don't bother weighting
-                        if self.widget['ApplyFaceWeightsSwitch'].get() == True and len(temp_holder) > 1:
-
-                            weight_list = [
-                                self.widget['FaceWeights0Slider'].get(), 
-                                self.widget['FaceWeights1Slider'].get(), 
-                                self.widget['FaceWeights2Slider'].get(),
-                                self.widget['FaceWeights3Slider'].get(),
-                                self.widget['FaceWeights4Slider'].get(),
-                                self.widget['FaceWeights5Slider'].get()]
-
-                            # If there's no weight difference, don't bother weighting
-                            if all(x == weight_list[0] for x in weight_list):
-                                weighted_array = temp_holder
-                            else:
-                                for i in range(len(temp_holder)):
-                                    weighted_array.extend([temp_holder[i]] * (weight_list[i] if i < len(weight_list) else 10))
-                        else:
-                            weighted_array = temp_holder
-                        tface['AssignedEmbedding'] = np.mean(weighted_array, 0)
-
-                    self.temp_emb = tface['AssignedEmbedding']
-                else:
-                    tface['AssignedEmbedding'] = []
-
-                    # for k in range(512):
-                    #     self.widget['emb_vec_' + str(k)].set(tface['AssignedEmbedding'][k], False)
-                break
-
-        self.add_action("target_faces", self.target_faces)
-        self.add_action('get_requested_video_frame', self.video_slider.get())
 
     def populate_target_videos(self):
         videos = []
@@ -2887,7 +3063,7 @@ class GUI(tk.Tk):
         self.toggle_play_video('stop')
         self.image_loaded = False
         self.video_loaded = False
-        self.clear_faces()
+        self.clear_target_faces()
 
         if media_type == 'Video':
             self.add_action("load_target_video", media_file)
@@ -3296,7 +3472,7 @@ class GUI(tk.Tk):
                     break
 
     def set_view(self, load_target_videos,b):
-        # self.clear_faces()
+        # self.clear_target_faces()
         # self.video_loaded = False
         # self.image_loaded = False
         if load_target_videos and self.widget['PreviewModeTextSel'].get() != 'Theater':
@@ -3346,7 +3522,7 @@ class GUI(tk.Tk):
             # for face in self.source_faces:
             #     if face["ButtonState"]:
             #         self.image_loaded = True
-            #         self.add_action("load_target_image", face["file"])
+            #         self.add_action("load_target_image", face["File"])
             #         break
 
         elif self.widget['PreviewModeTextSel'].get() == 'Theater':
