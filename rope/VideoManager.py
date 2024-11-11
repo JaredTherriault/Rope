@@ -1132,7 +1132,7 @@ class VideoManager():
             # force to use from_points in landmark detector when edit face is enabled.
             from_points = True
 
-        bboxes, kpss_5, kpss = self.func_w_test("detect", self.models.run_detect, img, parameters['DetectTypeTextSel'], max_num=20, score=parameters['DetectScoreSlider']/100.0, use_landmark_detection=use_landmark_detection, landmark_detect_mode=landmark_detect_mode, landmark_score=parameters["LandmarksDetectScoreSlider"]/100.0, from_points=from_points, rotation_angles=rotation_angles)
+        bboxes, kpss_5, kpss = self.func_w_test("detect", self.models.run_detect, img, parameters['DetectTypeTextSel'], max_num=parameters["MaxFacesSlider"], score=parameters['DetectScoreSlider']/100.0, use_landmark_detection=use_landmark_detection, landmark_detect_mode=landmark_detect_mode, landmark_score=parameters["LandmarksDetectScoreSlider"]/100.0, from_points=from_points, rotation_angles=rotation_angles)
 
         # Set Max FaceID to FaceLandmarks and FaceEditor widgets
         if kpss_5 is not None and len(kpss_5) > 0:
@@ -1145,40 +1145,47 @@ class VideoManager():
 
         # Get embeddings for all faces found in the frame
         ret = []
-        # Face Landmarks
+        # Check for landmarks and whether adjustment is enabled
         if kpss_5 is not None and len(kpss_5) > 0:
+            # Precompute the KPS adjustments if necessary
+            scale_factor = 1 + parameters['KPSScaleSlider'] / 100
+            if parameters['FaceAdjSwitch']:
+                kpsx_adj = parameters['KPSXSlider']
+                kpsy_adj = parameters['KPSYSlider']
+
             for i in range(kpss_5.shape[0]):
                 face_kps_5 = kpss_5[i]
                 face_kps = kpss[i]
-                # Face Landmarks
+
+                # Adjust landmarks if enabled
                 if self.face_landmarks and parameters['LandmarksPositionAdjSwitch']:
                     landmarks = self.face_landmarks.get_landmarks(frame_number, i + 1)
                     if landmarks is not None:
-                        # Change the ref points
+                        # Apply position and scale adjustment to landmarks in one go
                         if parameters['FaceAdjSwitch']:
-                            face_kps_5[:,0] += parameters['KPSXSlider']
-                            face_kps_5[:,1] += parameters['KPSYSlider']
-                            face_kps_5[:,0] -= 255
-                            face_kps_5[:,0] *= (1+parameters['KPSScaleSlider']/100)
-                            face_kps_5[:,0] += 255
-                            face_kps_5[:,1] -= 255
-                            face_kps_5[:,1] *= (1+parameters['KPSScaleSlider']/100)
-                            face_kps_5[:,1] += 255
+                            face_kps_5[:, 0] += kpsx_adj
+                            face_kps_5[:, 1] += kpsy_adj
+                            face_kps_5[:, 0] -= 255
+                            face_kps_5[:, 0] *= scale_factor
+                            face_kps_5[:, 0] += 255
+                            face_kps_5[:, 1] -= 255
+                            face_kps_5[:, 1] *= scale_factor
+                            face_kps_5[:, 1] += 255
 
-                        face_kps_5[0][0] += landmarks[0][0]
-                        face_kps_5[0][1] += landmarks[0][1]
-                        face_kps_5[1][0] += landmarks[1][0]
-                        face_kps_5[1][1] += landmarks[1][1]
-                        face_kps_5[2][0] += landmarks[2][0]
-                        face_kps_5[2][1] += landmarks[2][1]
-                        face_kps_5[3][0] += landmarks[3][0]
-                        face_kps_5[3][1] += landmarks[3][1]
-                        face_kps_5[4][0] += landmarks[4][0]
-                        face_kps_5[4][1] += landmarks[4][1]
-                #
+                        # Add landmark values to face_kps_5
+                        face_kps_5[:, 0] += landmarks[:, 0]
+                        face_kps_5[:, 1] += landmarks[:, 1]
 
+                # Handle face swapping button logic outside of the loop
                 if control['SwapFacesButton']:
-                    face_emb, _ = self.func_w_test('recognize',  self.models.run_recognize, img, face_kps_5, self.parameters["SimilarityTypeTextSel"], self.parameters['FaceSwapperModelTextSel'])
+                    face_emb, _ = self.func_w_test(
+                        'recognize',
+                        self.models.run_recognize,
+                        img,
+                        face_kps_5,
+                        self.parameters["SimilarityTypeTextSel"],
+                        self.parameters['FaceSwapperModelTextSel']
+                    )
                     ret.append([face_kps_5, face_kps, face_emb])
                 else:
                     ret.append([face_kps_5, face_kps, None])

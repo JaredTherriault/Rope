@@ -1471,6 +1471,10 @@ class GUI(tk.Tk):
         row = row + 1
         self.widget['ThresholdSlider'] = GE.Slider2(self.layer['parameters_frame'], 'ThresholdSlider', 'Similarity Threshhold', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.62)
 
+        # Max faces
+        row = row + 1
+        self.widget['MaxFacesSlider'] = GE.Slider2(self.layer['parameters_frame'], 'MaxFacesSlider', 'Max Faces', 3, self.update_data, 'parameter', 398, 20, row, 0, padx, pady, 0.62)
+
         # Cats and Dogs
         row = row + 1
         self.widget['DetectTypeTextSel'] = GE.TextSelectionComboBox(self.layer['parameters_frame'], 'DetectTypeTextSel', 'Detection Type', 3, self.update_data, 'parameter', 'parameter', 398, 20, row, 0, padx, pady, 0.62, 150)
