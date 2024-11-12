@@ -1132,7 +1132,19 @@ class VideoManager():
             # force to use from_points in landmark detector when edit face is enabled.
             from_points = True
 
-        bboxes, kpss_5, kpss = self.func_w_test("detect", self.models.run_detect, img, parameters['DetectTypeTextSel'], max_num=parameters["MaxFacesSlider"], score=parameters['DetectScoreSlider']/100.0, use_landmark_detection=use_landmark_detection, landmark_detect_mode=landmark_detect_mode, landmark_score=parameters["LandmarksDetectScoreSlider"]/100.0, from_points=from_points, rotation_angles=rotation_angles)
+        bboxes, kpss_5, kpss = self.func_w_test(
+            "detect", 
+            self.models.run_detect, 
+            img, 
+            parameters['DetectTypeTextSel'], 
+            max_num=parameters["MaxFacesSlider"], 
+            score=parameters['DetectScoreSlider']/100.0, 
+            use_landmark_detection=use_landmark_detection, 
+            landmark_detect_mode=landmark_detect_mode, 
+            landmark_score=parameters["LandmarksDetectScoreSlider"]/100.0, 
+            from_points=from_points, 
+            rotation_angles=rotation_angles
+        )
 
         # Set Max FaceID to FaceLandmarks and FaceEditor widgets
         if kpss_5 is not None and len(kpss_5) > 0:
