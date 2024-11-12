@@ -640,7 +640,7 @@ class VideoManager():
             print(f"target_delta_time: {target_delta_time}")
             print(f"delta_difference: {delta_difference}")
 
-            auto_frame_skip_deviation_threshold = 1.0 / self.fps
+            auto_frame_skip_deviation_threshold = 1.0 / self.fps * 1.2 
 
             # Increase auto skip
             if delta_difference > auto_frame_skip_deviation_threshold:
