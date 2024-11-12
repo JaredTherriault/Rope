@@ -875,13 +875,7 @@ class GUI(tk.Tk):
         def on_change_target_media_search_text(mode, name, use_markers):
 
             new_text = self.widget['TargetMediaSearchBarTextEntry'].get()
-            for button in self.target_media_buttons:
-                if new_text in button.media_file:
-                    button.visible = True
-                else:
-                    button.visible = False
-
-            self.redraw_target_media_canvas()
+            self.filter_target_media(new_text)
 
         # Search Bar
         self.widget['TargetMediaSearchBarTextEntry'] = GE.Text_Entry_Search(
@@ -931,13 +925,7 @@ class GUI(tk.Tk):
         def on_change_source_faces_search_text(mode, name, use_markers):
 
             new_text = self.widget['FacesSearchBarTextEntry'].get()
-            for face in self.source_faces:
-                if new_text in face["ButtonText"] or new_text in face["File"]:
-                    face["Visible"] = True
-                else:
-                    face["Visible"] = False
-
-            self.redraw_source_faces_canvas()
+            self.filter_source_faces(new_text)
 
         # Search Bar
         self.widget['FacesSearchBarTextEntry'] = GE.Text_Entry_Search(
@@ -2971,7 +2959,31 @@ class GUI(tk.Tk):
         self.all_target_media_thumbnails_generated = False
         self.redraw_target_media_canvas()
 
-    def redraw_target_media_canvas(self):
+    def filter_target_media(self, filter_text):
+
+        lowercase_filter_text = filter_text.lower()
+
+        for button in self.target_media_buttons:
+            if lowercase_filter_text in button.media_file.lower():
+                button.visible = True
+            else:
+                button.visible = False
+
+        self.redraw_target_media_canvas()
+
+    def filter_source_faces(self, filter_text):
+
+        lowercase_filter_text = filter_text.lower()
+
+        for face in self.source_faces:
+            if lowercase_filter_text in face["ButtonText"].lower() or lowercase_filter_text in face["File"].lower():
+                face["Visible"] = True
+            else:
+                face["Visible"] = False
+
+        self.redraw_source_faces_canvas()
+
+    def redraw_target_media_canvas(self,):
         # Clear all canvas items
         self.target_media_canvas.delete("all")
 
@@ -3087,7 +3099,11 @@ class GUI(tk.Tk):
 
     def render_thumbnails_for_drawn_target_media_buttons(self):
 
-        for button in self.get_drawn_target_media_buttons(self.target_media_buttons):
+        filter_text = self.widget['TargetMediaSearchBarTextEntry'].get()
+
+        visible_buttons = self.target_media_buttons if filter_text == "" else self.get_visible_media_buttons()
+
+        for button in self.get_drawn_target_media_buttons(visible_buttons):
             self.render_thumbnail_for_target_media_button(button)
 
     def render_thumbnails_for_all_target_media_buttons(self):
