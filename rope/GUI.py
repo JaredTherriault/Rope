@@ -879,7 +879,7 @@ class GUI(tk.Tk):
 
         # Search Bar
         self.widget['TargetMediaSearchBarTextEntry'] = GE.Text_Entry_Search(
-            target_media_meta_frame, 'TargetMediaSearchBarTextEntry', 'Search', 3, on_change_target_media_search_text, 'control', row=0, column=0, padx=0, pady=0)
+            target_media_meta_frame, 'TargetMediaSearchBarTextEntry', 'Search', 3, on_change_target_media_search_text, 'control', row=0, column=0, padx=4, pady=0)
 
         # Input Videos Frame
         self.layer['TargetMediaFrame'] = tk.Canvas(target_media_meta_frame, style.canvas_frame_label_3)
@@ -929,7 +929,7 @@ class GUI(tk.Tk):
 
         # Search Bar
         self.widget['FacesSearchBarTextEntry'] = GE.Text_Entry_Search(
-            source_face_meta_frame, 'FacesSearchBarTextEntry', 'Search', 3, on_change_source_faces_search_text, 'control', row=0, column=0, padx=0, pady=0)
+            source_face_meta_frame, 'FacesSearchBarTextEntry', 'Search', 3, on_change_source_faces_search_text, 'control', row=0, column=0, padx=4, pady=0)
        
         # Source Faces Frame
         self.layer['SourceFacesFrame'] = tk.Frame(source_face_meta_frame, style.canvas_frame_label_3)
