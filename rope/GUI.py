@@ -2976,7 +2976,8 @@ class GUI(tk.Tk):
         lowercase_filter_text = filter_text.lower()
 
         for face in self.source_faces:
-            if lowercase_filter_text in face["ButtonText"].lower() or lowercase_filter_text in face["File"].lower():
+            comparison_text = face["ButtonText"].lower() if isinstance(face["File"], list) else face["File"].lower()
+            if lowercase_filter_text in comparison_text:
                 face["Visible"] = True
             else:
                 face["Visible"] = False
