@@ -1738,8 +1738,7 @@ class Text_Entry():
         return self.entry_text.get()
 
     def set(self, value, request_frame=True):
-        pass
-        # self.select_ui_text_selection(value, request_frame)
+        self.entry_text.set(value)
 
     def hide(self):
         if not self.is_resizing:
@@ -1797,6 +1796,7 @@ class Text_Entry_Search(Text_Entry):
         self.frame.grid(row=row, column=column, sticky='news', padx=padx, pady=pady)
         self.frame.grid_columnconfigure(0, weight=0)
         self.frame.grid_columnconfigure(1, weight=1)
+        self.frame.grid_columnconfigure(2, weight=0)
         self.frame.bind("<Enter>", lambda event: self.on_enter())
 
         # Create the text on the left
@@ -1806,6 +1806,16 @@ class Text_Entry_Search(Text_Entry):
         self.entry = tk.Entry(self.frame, style.entry_search, textvariable=self.entry_text)
         self.entry.grid(row=0, column=1, sticky='news', padx=0, pady=0)
         self.entry.bind("<Return>", lambda event: self.send_text(self.entry_text.get()))
+
+        # Clear search button
+        self.clear_button = tk.Button(
+            self.frame, style.media_button_off_3, image=self.blank, text="X", compound='c', anchor='c')
+        self.clear_button.grid(row=0, column=2, sticky='news', padx=0, pady=0)
+        self.clear_button.bind("<ButtonRelease-1>", lambda event: self.clear_search())
+
+    def clear_search(self):
+        self.set("")
+        self.send_text(self.entry_text.get())
 
 class VRAM_Indicator:
     def __init__(self, parent, style_level, width, height, x, y):
