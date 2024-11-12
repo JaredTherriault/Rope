@@ -1804,7 +1804,7 @@ class Text_Entry_Search(Text_Entry):
         self.text_label.grid(row=0, column=0, sticky='w', padx=0, pady=0)
 
         self.entry = tk.Entry(self.frame, style.entry_search, textvariable=self.entry_text)
-        self.entry.grid(row=0, column=1, sticky='news', padx=8, pady=0)
+        self.entry.grid(row=0, column=1, sticky='news', padx=0, pady=0)
         self.entry.bind("<Return>", lambda event: self.send_text(self.entry_text.get()))
 
 class VRAM_Indicator:

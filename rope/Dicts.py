@@ -871,6 +871,10 @@ DEFAULT_DATA = {
 'CLIPTextEntryInfoText':            'TEXT MASKING ENTRY:\nTo use, type a word(s) in the box separated by commas and press <enter>.',
 
 # Text Entry
+'TargetMediaSearchBarTextEntry':    '',
+'TargetMediaSearchBarTextEntryInfoText':  'MEDIA SEARCH:\nFilter out any media whose paths don\'t match the search string',
+
+# Text Entry
 'FacesSearchBarTextEntry':    '',
 'FacesSearchBarTextEntryInfoText':  'FACES SEARCH:\nFilter out any faces whose paths don\'t match the search string',
 

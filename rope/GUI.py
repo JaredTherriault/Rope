@@ -865,17 +865,47 @@ class GUI(tk.Tk):
         self.widget['VideoFolderButton'] = GE.Button(frame, 'LoadTVideos', 2, self.select_video_path, None, 'control', 10, 1, width=195)
         self.input_videos_text = GE.Text(frame, '', 2, 10, 20, 190, 20)
 
-        # Input Videos Canvas
-        self.target_media_canvas = tk.Canvas(self.layer['InputVideoFrame'], style.canvas_frame_label_3, height=100, width=195)
-        self.target_media_canvas.grid(row=1, column=0, sticky='NEWS', padx=10, pady=10)
-        self.target_media_canvas.create_text(8, 20, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Input Videos")
+        # Meta frame
+        target_media_meta_frame = tk.Frame(self.layer['InputVideoFrame'], style.canvas_frame_label_3)
+        target_media_meta_frame.grid(row=1, column=1, sticky='NEWS', padx=0, pady=0)
+        target_media_meta_frame.grid_rowconfigure(0, weight=0) # Search
+        target_media_meta_frame.grid_rowconfigure(1, weight=1) # Canvas
+        target_media_meta_frame.grid_columnconfigure(0, weight=1)  # Make column 0 expand
+
+        def on_change_target_media_search_text(mode, name, use_markers):
+
+            new_text = self.widget['TargetMediaSearchBarTextEntry'].get()
+            for button in self.target_media_buttons:
+                if new_text in button.media_file:
+                    button.visible = True
+                else:
+                    button.visible = False
+
+            self.redraw_target_media_canvas()
+
+        # Search Bar
+        self.widget['TargetMediaSearchBarTextEntry'] = GE.Text_Entry_Search(
+            target_media_meta_frame, 'TargetMediaSearchBarTextEntry', 'Search', 3, on_change_target_media_search_text, 'control', row=0, column=0, padx=0, pady=0)
+
+        # Input Videos Frame
+        self.layer['TargetMediaFrame'] = tk.Canvas(target_media_meta_frame, style.canvas_frame_label_3)
+        self.layer['TargetMediaFrame'].grid(row=1, column=0, sticky='NEWS', padx=0, pady=0)
+        self.layer['TargetMediaFrame'].grid_rowconfigure(0, weight=0)
+        self.layer['TargetMediaFrame'].grid_rowconfigure(1, weight=1)
+
+        # Scroll Canvas 
+        self.target_media_canvas = tk.Canvas(self.layer['TargetMediaFrame'], style.canvas_frame_label_3, width=195)
+        self.target_media_canvas.grid(row=1, column=0, sticky='NEWS', padx=10, pady=0)
+        
         self.bind_scroll_events(self.target_media_canvas, self.target_videos_mouse_wheel)
 
-        # Scroll Canvas
-        scroll_canvas = tk.Canvas(self.layer['InputVideoFrame'], style.canvas_frame_label_3, bd=0, )
+        self.target_media_canvas.create_text(8, 20, anchor='w', fill='grey25', font=("Arial italic", 20), text=" Input Videos")
+
+        scroll_canvas = tk.Canvas(self.layer['TargetMediaFrame'], style.canvas_frame_label_3, bd=0)
         scroll_canvas.grid(row=1, column=1, sticky='NEWS', padx=0, pady=0)
         scroll_canvas.grid_rowconfigure(0, weight=1)
-        scroll_canvas.grid_columnconfigure(0, weight=1)
+        scroll_canvas.grid_columnconfigure(0, weight=1)  
+        scroll_canvas.grid_columnconfigure(1, weight=0)
 
         self.static_widget['input_videos_scrollbar'] = GE.Scrollbar_y(scroll_canvas, self.target_media_canvas)
 
@@ -891,13 +921,14 @@ class GUI(tk.Tk):
         self.widget['FacesFolderButton'] = GE.Button(frame, 'LoadSFaces', 2, self.select_faces_path, None, 'control', 10, 1, width=195)
         self.input_faces_text = GE.Text(frame, '', 2, 10, 20, 190, 20)
 
+        # Meta frame
         source_face_meta_frame = tk.Frame(self.layer['InputVideoFrame'], style.canvas_frame_label_3)
-        source_face_meta_frame.grid(row=1, column=2, sticky='NEWS', padx=10, pady=10)
+        source_face_meta_frame.grid(row=1, column=2, sticky='NEWS', padx=0, pady=0)
         source_face_meta_frame.grid_rowconfigure(0, weight=0) # Search
         source_face_meta_frame.grid_rowconfigure(1, weight=1) # Canvas
         source_face_meta_frame.grid_columnconfigure(0, weight=1)  # Make column 0 expand
 
-        def on_change_search_text(mode, name, use_markers):
+        def on_change_source_faces_search_text(mode, name, use_markers):
 
             new_text = self.widget['FacesSearchBarTextEntry'].get()
             for face in self.source_faces:
@@ -908,17 +939,19 @@ class GUI(tk.Tk):
 
             self.redraw_source_faces_canvas()
 
-        # Search Bar - New Entry widget between the button and the canvas
-        self.widget['FacesSearchBarTextEntry'] = GE.Text_Entry_Search(source_face_meta_frame, 'FacesSearchBarTextEntry', 'Search', 3, on_change_search_text, 'control', row=0, column=0, padx=0, pady=0)
-
+        # Search Bar
+        self.widget['FacesSearchBarTextEntry'] = GE.Text_Entry_Search(
+            source_face_meta_frame, 'FacesSearchBarTextEntry', 'Search', 3, on_change_source_faces_search_text, 'control', row=0, column=0, padx=0, pady=0)
+       
+        # Source Faces Frame
         self.layer['SourceFacesFrame'] = tk.Frame(source_face_meta_frame, style.canvas_frame_label_3)
-        self.layer['SourceFacesFrame'].grid(row=1, column=0, sticky='NEWS', padx=10, pady=10)
+        self.layer['SourceFacesFrame'].grid(row=1, column=0, sticky='NEWS', padx=0, pady=0)
         self.layer['SourceFacesFrame'].grid_rowconfigure(0, weight=0)
         self.layer['SourceFacesFrame'].grid_rowconfigure(1, weight=1)
 
         # Scroll Canvas
         self.source_faces_canvas = tk.Canvas(self.layer['SourceFacesFrame'], style.canvas_frame_label_3, width=195)
-        self.source_faces_canvas.grid(row=1, column=0, sticky='NEWS', padx=10, pady=10)
+        self.source_faces_canvas.grid(row=1, column=0, sticky='NEWS', padx=10, pady=0)
 
         self.bind_scroll_events(self.source_faces_canvas, self.source_faces_mouse_wheel)
 
@@ -933,7 +966,7 @@ class GUI(tk.Tk):
         self.static_widget['input_faces_scrollbar'] = GE.Scrollbar_y(scroll_canvas, self.source_faces_canvas)
 
         # GE.Separator_y(scroll_canvas, 14, 0)
-        GE.Separator_y(self.layer['InputVideoFrame'], 229, 0)
+        # GE.Separator_y(self.layer['InputVideoFrame'], 229, 0)
         GE.Separator_x(self.layer['InputVideoFrame'], 0, 41)
 
     ### Preview
@@ -1852,7 +1885,7 @@ class GUI(tk.Tk):
         center = center+self.target_media_canvas.yview()[0]
         self.static_widget['input_videos_scrollbar'].set(center)
 
-        self.render_thumbnails_for_visible_target_media_buttons()
+        self.render_thumbnails_for_drawn_target_media_buttons()
 
     def parameters_mouse_wheel(self, event, delta = 0):
         self.parameters_canvas.yview_scroll(delta, "units")
@@ -2767,13 +2800,15 @@ class GUI(tk.Tk):
                     face_locked = "LockedButtonState" in self.source_faces[i] and self.source_faces[i]["LockedButtonState"] == True
                     if not face_locked and self.source_faces[i]["ButtonState"]:
                         for j in range(i, button, 1):
-                            self.source_faces[j]["ButtonState"] = True
+                            if self.source_faces[j]["Visible"]:
+                                self.source_faces[j]["ButtonState"] = True
                         break
                 for i in range(button+1, len(self.source_faces), 1):
                     face_locked = "LockedButtonState" in self.source_faces[i] and self.source_faces[i]["LockedButtonState"] == True
                     if not face_locked and self.source_faces[i]["ButtonState"]:
                         for j in range(button, i, 1):
-                            self.source_faces[j]["ButtonState"] = True
+                            if self.source_faces[j]["Visible"]:
+                                self.source_faces[j]["ButtonState"] = True
                         break
 
             if modifier == "alt":
@@ -2889,7 +2924,7 @@ class GUI(tk.Tk):
 
         if self.widget['PreviewModeTextSel'].get()== 'Image':#images
             for i in range(len(images)):
-                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 190)
+                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 180)
                 button.visible = True
                 self.target_media_buttons.append(button)
 
@@ -2897,6 +2932,7 @@ class GUI(tk.Tk):
                 self.target_media.append(ImageTk.PhotoImage(image=rgb_video))
                 button.config( image = self.target_media[i],  command=lambda i=i: self.load_target(images[i][1], self.widget['PreviewModeTextSel'].get()))
                 button.media_file = images[i][1]
+                button.original_index = i
                 self.bind_scroll_events(button, self.target_videos_mouse_wheel)
                 button.has_thumbnail = True
 
@@ -2916,7 +2952,7 @@ class GUI(tk.Tk):
                 image = videos[i][0]
                 has_thumbnail = True if image is not None else False
 
-                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 190)
+                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 165)
                 button.visible = True
                 self.target_media_buttons.append(button)
                 self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(image)) if has_thumbnail else placeholder_thumbnail)
@@ -2929,11 +2965,11 @@ class GUI(tk.Tk):
                 self.bind_scroll_events(button, self.target_videos_mouse_wheel)
                 button.config(image = self.target_media[i], text=filename, compound='top', anchor='n',command=lambda i=i: self.load_target(videos[i][1], self.widget['PreviewModeTextSel'].get()))
                 button.media_file = videos[i][1]
+                button.original_index = i
                 button.has_thumbnail = has_thumbnail
 
         self.all_target_media_thumbnails_generated = False
         self.redraw_target_media_canvas()
-        self.render_thumbnails_for_visible_target_media_buttons()
 
     def redraw_target_media_canvas(self):
         # Clear all canvas items
@@ -2955,6 +2991,8 @@ class GUI(tk.Tk):
 
         self.static_widget['input_videos_scrollbar'].resize_scrollbar(None)
 
+        self.render_thumbnails_for_drawn_target_media_buttons()
+
     def redraw_source_faces_canvas(self):
         # Clear all canvas items
         self.source_faces_canvas.delete("all")
@@ -2975,7 +3013,7 @@ class GUI(tk.Tk):
 
         self.static_widget['input_faces_scrollbar'].resize_scrollbar(None)
 
-    def is_item_visible_in_canvas(self, canvas, item_id):
+    def is_item_drawn_in_canvas(self, canvas, item_id):
         coords = canvas.bbox(item_id)
         if coords:
             x1, y1, x2, y2 = coords
@@ -2996,28 +3034,40 @@ class GUI(tk.Tk):
 
         return False
 
-    def get_visible_target_media_buttons(self):
+    def get_visible_media_buttons(self):
 
         out_buttons = []
-        has_found_visible = False
+
+        for button in self.target_media_buttons:
+            if button.visible:
+                out_buttons.append(button)
+
+        return out_buttons
+
+    def get_drawn_target_media_buttons(self, visible_buttons):
+
+        out_buttons = []
+        has_found_drawn = False
 
         _, view_y2 = self.target_media_canvas.yview()
-        button_count = len(self.target_media_buttons)
+        button_count = len(visible_buttons)
 
         # Multiply scroll amount by button count to get an index to start with
         # then offset it to start a bit before that point and clamp it to min 0
         start_index = max(0, int(button_count * view_y2) - 20)
 
         for i in range(start_index, button_count):
-            button = self.target_media_buttons[i]
-            if self.is_item_visible_in_canvas(self.target_media_canvas, button.item_id):
+            button = visible_buttons[i]
+            if not button.visible:
+                continue
+            if self.is_item_drawn_in_canvas(self.target_media_canvas, button.item_id):
                 out_buttons.append(button)
-                has_found_visible = True
-            elif has_found_visible:
-                # Visible target media wil be contiguous,
-                # so if we've found some visible media
-                # but this iteration doesn't return visible,
-                # we're not going to find anymore visible items
+                has_found_drawn = True
+            elif has_found_drawn:
+                # drawn target media wil be contiguous,
+                # so if we've found some drawn media
+                # but this iteration doesn't return drawn,
+                # we're not going to find anymore drawn items
                 break
 
         return out_buttons
@@ -3031,13 +3081,13 @@ class GUI(tk.Tk):
 
         if frame is not None:
             thumbnail = ImageTk.PhotoImage(image=Image.fromarray(frame))
-            self.target_media[button.canvas_index] = thumbnail
+            self.target_media[button.original_index] = thumbnail
             button.config(image = thumbnail)
             button.has_thumbnail = True
 
-    def render_thumbnails_for_visible_target_media_buttons(self):
+    def render_thumbnails_for_drawn_target_media_buttons(self):
 
-        for button in self.get_visible_target_media_buttons():
+        for button in self.get_drawn_target_media_buttons(self.target_media_buttons):
             self.render_thumbnail_for_target_media_button(button)
 
     def render_thumbnails_for_all_target_media_buttons(self):
@@ -3081,7 +3131,7 @@ class GUI(tk.Tk):
         if is_scrolled_to_max_y(self.target_media_canvas):
             self.scroll_timeout = self.after(1000, self.render_thumbnails_for_all_target_media_buttons)
         else:
-            self.scroll_timeout = self.after(350, self.render_thumbnails_for_visible_target_media_buttons)
+            self.scroll_timeout = self.after(350, self.render_thumbnails_for_drawn_target_media_buttons)
 
     def toggle_auto_swap(self):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
@@ -3149,10 +3199,11 @@ class GUI(tk.Tk):
             self.toggle_play_video("play")
 
         for i in range(len(self.target_media_buttons)):
-            if self.target_media_buttons[i].media_file == media_file:
-                self.target_media_buttons[i].config(style.media_button_on_3)
-            else:
-                self.target_media_buttons[i].config(style.media_button_off_3)
+            if self.target_media_buttons[i].visible:
+                if self.target_media_buttons[i].media_file == media_file:
+                    self.target_media_buttons[i].config(style.media_button_on_3)
+                else:
+                    self.target_media_buttons[i].config(style.media_button_off_3)
 
         # delete all markers
         self.layer['markers_canvas'].delete('all')
