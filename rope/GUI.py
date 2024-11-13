@@ -2962,6 +2962,10 @@ class GUI(tk.Tk):
         self.all_target_media_thumbnails_generated = False
         self.redraw_target_media_canvas()
 
+    def tokenize_filter_text(self, filter_text):
+
+        return filter_text.lower().split(" ")
+
     def filter_target_media(self, filter_text):
 
         lowercase_filter_text = filter_text.lower()
