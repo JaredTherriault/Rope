@@ -3019,7 +3019,7 @@ class GUI(tk.Tk):
         visible_items = []
         for face in self.source_faces:
             # Only place "image" faces and not merged embeddings
-            if face["File"] != "" and face["Visible"] == True: 
+            if not face["IsMergedEmbedding"] and face["Visible"]: 
                 visible_items.append(face)
 
         # Re-add the items to the canvas, repositioning them as needed
