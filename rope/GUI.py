@@ -2633,9 +2633,10 @@ class GUI(tk.Tk):
                 assign_embeddings_to_target_face(False)
 
             def on_selected_face_right_click(event):
+                face["LockedButtonState"] = True # lock it to unlock it
                 face_index = self.source_faces.index(face)
                 if face_index > -1:
-                    self.select_input_faces(event, face_index)
+                    self.select_input_faces("alt", face_index)
 
             self.bind_scroll_events(button, on_selected_face_scroll)
             button.bind("<ButtonRelease-1>", on_selected_face_left_click)            
