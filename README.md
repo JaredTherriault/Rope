@@ -6,6 +6,7 @@ Priorities:
 * Easier interaction with components
 * Streamlined real-time playback experience
 * Support for most file types found on the web
+* Linux support
 
 ![image](https://github.com/Alucard24/Rope/releases/download/splash/splash_next.png)
 
