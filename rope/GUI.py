@@ -16,7 +16,7 @@ import customtkinter as ctk
 torchvision.disable_beta_transforms_warning()
 import mimetypes
 import webbrowser
-from random import random, randint
+from random import random, randint, shuffle
 
 import rope.GUIElements as GE
 import rope.Styles as style
@@ -85,6 +85,7 @@ class GUI(tk.Tk):
         self.output_folder = []
         self.output_videos_text = []
         self.target_media_buttons = []
+        self.target_media_shuffle_history = set()
         self.all_target_media_thumbnails_generated = False
         self.input_videos_button = []
         self.input_videos_text = []
@@ -189,7 +190,6 @@ class GUI(tk.Tk):
                     "Nudge Right 30 Frames": "d",
                     "Record": "r",
                     "Play": "space",
-                    "Loop": "l",
                     "Save Image": "ctrl+s",
                     "Add Marker": "f",
                     "Delete Marker": "alt+f",
@@ -229,7 +229,6 @@ class GUI(tk.Tk):
             shortcuts["Record"]: lambda: self.toggle_rec_video(),
             shortcuts["Play"]: lambda: self.toggle_play_video(),
             shortcuts["Nudge Right 30 Frames"]: lambda: self.preview_control('d'),
-            shortcuts["Loop"]: lambda: self.toggle_loop_video(),
             shortcuts["Save Image"]: lambda: self.save_image(),
             shortcuts["Add Marker"]: lambda: self.update_marker('add'),
             shortcuts["Delete Marker"]: lambda: self.update_marker('delete'),
@@ -471,7 +470,6 @@ class GUI(tk.Tk):
                 shortcuts["Record"]: lambda: self.toggle_rec_video(),
                 shortcuts["Play"]: lambda: self.toggle_play_video(),
                 shortcuts["Nudge Right 30 Frames"]: lambda: self.preview_control('d'),
-                shortcuts["Loop"]: lambda: self.toggle_loop_video(),
                 shortcuts["Save Image"]: lambda: self.save_image(),
                 shortcuts["Add Marker"]: lambda: self.update_marker('add'),
                 shortcuts["Delete Marker"]: lambda: self.update_marker('delete'),
@@ -1054,8 +1052,6 @@ class GUI(tk.Tk):
         self.widget['TLPlayButton'] = GE.Button(play_control_frame, 'Play', 2, self.toggle_play_video, None, 'control', x=column , y=2, width=20)
         column += col_delta
         self.widget['TLRightButton'] = GE.Button(play_control_frame, 'TLRight', 2, self.preview_control, 'd', 'control', x=column , y=2, width=20)
-        column += col_delta
-        self.widget['TLLoopButton'] = GE.Button(play_control_frame, 'Loop', 2, self.toggle_loop_video, None, 'control', x=column , y=2, width=20)
 
         # Right Side
         right_playframe = tk.Frame(self.layer['preview_frame'], style.canvas_frame_label_2, height=30, width=120)
@@ -1083,6 +1079,10 @@ class GUI(tk.Tk):
         self.layer['image_controls_auto_swap_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, height=33)
         self.layer['image_controls_auto_swap_frame'].grid(row=0, column=1, sticky='W', pady=0)
         self.widget['AutoSwapTextSel'] = GE.TextSelection(self.layer['image_controls_auto_swap_frame'], 'AutoSwapTextSel', 'Auto Swap', 3, self.update_data, 'control', 'control', 220, 33, 0, 0, 0, 0, 0.72)
+        
+        self.layer['image_controls_after_playback_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, height=33)
+        self.layer['image_controls_after_playback_frame'].grid(row=0, column=2, sticky='W', pady=0)
+        self.widget['AfterPlaybackTextSel'] = GE.TextSelection(self.layer['image_controls_after_playback_frame'], 'AfterPlaybackTextSel', 'After Playback', 3, self.update_data, 'control', 'control', 320, 33, 0, 0, 0, 0, 0.72)
 
         # Delete Media Frame (aligned right)
         self.layer['image_controls_delete_image_frame'] = tk.Frame(self.layer['image_controls'], style.canvas_frame_label_2, width=130, height=33)
@@ -2954,6 +2954,7 @@ class GUI(tk.Tk):
                 button.original_index = i
                 button.has_thumbnail = has_thumbnail
 
+        self.target_media_shuffle_history = set()
         self.all_target_media_thumbnails_generated = False
         self.redraw_target_media_canvas()
 
@@ -3211,6 +3212,11 @@ class GUI(tk.Tk):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
         if auto_swap_state != "off":
             self.add_action('function', "gui.auto_swap()")
+            self.toggle_play_video("play")
+
+        # Allow continuous playback if play next or play random
+        after_playback = self.widget['AfterPlaybackTextSel'].get()
+        if after_playback in ['next', 'shuffle']:
             self.toggle_play_video("play")
 
         for i in range(len(self.target_media_buttons)):
@@ -3482,18 +3488,6 @@ class GUI(tk.Tk):
 
             else:
                 self.widget['TLRecButton'].disable_button()
-
-    def toggle_loop_video(self):
-
-        self.widget['TLLoopButton'].toggle_button()
-
-        if self.widget['TLLoopButton'].get():
-            self.widget['TLLoopButton'].enable_button()
-            self.add_action("play_video", "loop_on")
-
-        else:
-            self.widget['TLLoopButton'].disable_button()
-            self.add_action("play_video", "loop_off")
 
     # this makes no sense
     def add_action(self, action, parameter=None): #
@@ -4047,6 +4041,33 @@ class GUI(tk.Tk):
 
     def select_next_target_media(self):
         self.select_adjacent_target_media(1)
+
+    def select_random_target_media(self, remove_history = False):
+
+        visible_media_buttons = self.get_visible_media_buttons()
+
+        if remove_history:
+            self.target_media_shuffle_history = set()
+
+        # Create a list of indices for visible media buttons
+        available_indices = [i for i in range(len(visible_media_buttons)) if i not in self.target_media_shuffle_history]
+
+        # If all indices are used, reset the history and shuffle from all available buttons
+        if not available_indices:
+            self.target_media_shuffle_history = set()  # Clear history if all have been selected
+            available_indices = list(range(len(visible_media_buttons)))
+
+        # Shuffle available indices to ensure randomness
+        shuffle(available_indices)
+
+        # Select the first item from the shuffled list
+        random_index = available_indices[0]
+
+        # Add the selected index to history
+        self.target_media_shuffle_history.add(random_index)
+
+        self.load_target(self.target_media_buttons[random_index].media_file, self.widget['PreviewModeTextSel'].get())
+        self.scroll_to_target_media(self.target_media_buttons[random_index].item_id)
 
     def parameter_io(self, task, initial_dir="."):
         if task == 'save':

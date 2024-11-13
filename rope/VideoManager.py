@@ -50,7 +50,6 @@ class VideoManager():
         self.is_video_loaded = False        # flag for video loaded state
         self.video_frame_total = None       # length of currently loaded video
         self.play = False                   # flag for the play button toggle
-        self.loop = False                   # flag for whether to loop the video
         self.current_frame = 0              # the current frame of the video
         self.create_video = False
         self.output_video = []
@@ -575,12 +574,6 @@ class VideoManager():
                         self.temp_file]
 
                 self.sp = subprocess.Popen(args, stdin=subprocess.PIPE)
-
-        elif command == "loop_on":
-            self.loop = True
-
-        elif command == "loop_off":
-            self.loop = False
             
     def terminate_audio_process_tree(self):
         if hasattr(self, 'audio_sp') and self.audio_sp is not None:
@@ -738,10 +731,18 @@ class VideoManager():
 
                     if processed_frame_number >= self.video_frame_total-1 or processed_frame_number == self.stop_marker:
                         
-                        if self.loop:
+                        action = self.control['AfterPlaybackTextSel']
+
+                        if action == 'loop':
                             with lock:
                                 self.current_frame = 0
                                 self.play_video("play")
+                        elif action == 'next':
+                            self.play_video("stop")
+                            self.add_action("function", "gui.select_next_target_media()")
+                        elif action == 'shuffle':
+                            self.play_video("stop")
+                            self.add_action("function", "gui.select_random_target_media()")
                         else:
                             self.play_video('stop')
 

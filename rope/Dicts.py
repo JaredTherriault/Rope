@@ -179,6 +179,10 @@ DEFAULT_DATA = {
 'AutoSwapTextSelMode':            'off',
 'AutoSwapTextSelModes':           ['off', 'same', 'random'],
 
+'AfterPlaybackTextSelInfoText':        'AFTER PLAYBACK:\nChoose what happens after playback: stop, loop, play next, or play shuffled',
+'AfterPlaybackTextSelMode':            'stop',
+'AfterPlaybackTextSelModes':           ['stop', 'loop', 'next', 'shuffle'],
+
 'ClearVramButtonDisplay':                   'text',
 'ClearVramButtonInfoText':                  'CLEAR VRAM:\nClears models from your VRAM.',
 'ClearVramButtonState':                     False,
