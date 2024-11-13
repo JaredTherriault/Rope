@@ -1824,6 +1824,8 @@ class GUI(tk.Tk):
                 self.populate_target_videos()
             elif name=='ThreadsSlider':
                 self.models.set_number_of_threads(self.parameters[name])
+            elif name=='ApplyFaceWeightsSwitch':
+                self.select_input_faces("same", "")
             # Face Editor
             '''
             elif mode=='parameter_face_editor':
