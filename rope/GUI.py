@@ -2303,6 +2303,9 @@ class GUI(tk.Tk):
 
         filenames = sorted(filenames, key=str.lower)
 
+        self.selected_source_faces = []
+        self.selected_source_faces_canvas.delete("all")
+
         # torch.cuda.memory._record_memory_history(True, trace_alloc_max_entries=100000, trace_alloc_record_context=True)
         i=0
         for file in filenames: # Does not include full path
