@@ -2728,19 +2728,8 @@ class GUI(tk.Tk):
 
                     # do averaging
                     if temp_holder:
-                        if self.widget['MergeTextSel'].get() == 'Median':
-                            tface['AssignedEmbedding'] = np.median(temp_holder, 0)
-                        elif self.widget['MergeTextSel'].get() == 'Mean':
-                            weighted_array = []
-                            # If multiple faces aren't selected, don't bother weighting
-                            if self.widget['ApplyFaceWeightsSwitch'].get() == True and len(temp_holder) > 1:
-
-                                for i in range(len(temp_holder)):
-                                    weighted_array.extend([temp_holder[i]] * self.selected_source_faces[i]["EmbeddingWeight"])
-                                    
-                            else:
-                                weighted_array = temp_holder
-                            tface['AssignedEmbedding'] = np.mean(weighted_array, 0)
+                        
+                        tface['AssignedEmbedding'] = self.merge_embeddings(temp_holder)
 
                         self.temp_emb = tface['AssignedEmbedding']
                     else:
@@ -3526,6 +3515,25 @@ class GUI(tk.Tk):
         else:
             self.static_widget['vram_indicator'].set(used, total)
 
+    def merge_embeddings(self, embedding_array):
+        if embedding_array:
+            if self.widget['MergeTextSel'].get() == 'Median':
+                return np.median(embedding_array, 0)
+            elif self.widget['MergeTextSel'].get() == 'Mean':
+                weighted_array = []
+                # If multiple faces aren't selected, don't bother weighting
+                if self.widget['ApplyFaceWeightsSwitch'].get() == True and len(embedding_array) > 1:
+
+                    for i in range(len(embedding_array)):
+                        weighted_array.extend([embedding_array[i]] * self.selected_source_faces[i]["EmbeddingWeight"])
+                        
+                else:
+                    weighted_array = embedding_array
+                return np.mean(weighted_array, 0)
+        else:
+            return []
+
+
 # refactor and thread i/o
     def save_selected_source_faces(self, text):
         # get name from text field
@@ -3540,10 +3548,8 @@ class GUI(tk.Tk):
                 temp_holder.append(button['Embedding'])
 
         if temp_holder:
-            if self.widget['MergeTextSel'].get()=='Median':
-                ave_embedding = np.median(temp_holder,0)
-            elif self.widget['MergeTextSel'].get()=='Mean':
-                ave_embedding = np.mean(temp_holder,0)
+            
+            ave_embedding = self.merge_embeddings(temp_holder)
 
             for tface in self.target_faces:
                 if tface["ButtonState"]:
