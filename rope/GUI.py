@@ -3029,6 +3029,27 @@ class GUI(tk.Tk):
 
         self.static_widget['input_faces_scrollbar'].resize_scrollbar(None)
 
+    def redraw_merged_faces_canvas(self):
+        # Clear all canvas items
+        self.merged_faces_canvas.delete("all")
+
+        # Get a list of visible items
+        visible_items = []
+        for face in self.source_faces:
+            # Only place merged embeddings
+            if face["IsMergedEmbedding"] and face["Visible"]: 
+                visible_items.append(face)
+
+        # Re-add the items to the canvas, repositioning them as needed
+        for i, face in enumerate(visible_items):
+            x_width = 20
+            if len(self.source_faces)>0:
+                x_width += self.get_adjacent_element_width(i)
+            face["ItemId"] = self.merged_faces_canvas.create_window(x_width,8+(22*(i%4)), window = visible_items[i]["TKButton"],anchor='nw')
+            face["CanvasIndex"] = i
+
+        self.static_widget['input_faces_scrollbar'].resize_scrollbar(None)
+
     def is_item_drawn_in_canvas(self, canvas, item_id):
         coords = canvas.bbox(item_id)
         if coords:
