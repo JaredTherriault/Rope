@@ -1,3 +1,5 @@
+Hobby fork. I develop from dev-merge. Check that branch out if you want to use the latest features, but keep in mind I move fast and break things.
+
 ![image](https://github.com/Alucard24/Rope/releases/download/splash/splash_next.png)
 
 Next(Stable)-1.1.03
