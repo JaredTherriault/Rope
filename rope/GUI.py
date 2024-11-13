@@ -2808,12 +2808,24 @@ class GUI(tk.Tk):
                 
             higlight_selected_faces(button)
             
-        if modifier == 'random':
-            self.clear_face_highlights(True)
-            face_count = len(self.source_faces)
-            random_index = randint(0, face_count - 1)
-            self.source_faces[random_index]["ButtonState"] = True
-            higlight_selected_faces(random_index)
+        elif modifier == 'random':    
+
+            # Only select faces that are not currently filtered out and not currently selected
+            available_indices = [
+                i 
+                for i in range(len(self.source_faces))
+                if self.source_faces[i]["Visible"]
+                and not self.source_faces[i]["ButtonState"]
+                and not self.source_faces[i]["LockedButtonState"]
+            ]
+
+            if available_indices:
+                self.clear_face_highlights(True)
+
+                shuffle(available_indices)
+                random_index = available_indices[0]
+                self.source_faces[random_index]["ButtonState"] = True
+                higlight_selected_faces(random_index)
 
         assign_embeddings_to_target_face()
 
