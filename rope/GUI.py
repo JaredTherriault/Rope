@@ -2562,7 +2562,7 @@ class GUI(tk.Tk):
             if len(self.selected_source_faces) > 0:
                 if "File" in face or "ButtonText" in face:
                     for selected_face in self.selected_source_faces:
-                        if selected_face["File"] == (face["File"] if "File" in face else face["ButtonText"]):
+                        if selected_face["File"] == (face["File"] if "File" in face and face["File"] != "" else face["ButtonText"]):
                             return selected_face
 
             new_target_face = self.selected_source_face.copy()
@@ -2583,7 +2583,7 @@ class GUI(tk.Tk):
             button.config(font=("Arial", 1))
             self.selected_source_faces[last_index]["TKButton"] = button
 
-            if "File" in face:
+            if "File" in face and face["File"] != "":
                 self.selected_source_faces[last_index]["File"] = face["File"]
             else:
                 self.selected_source_faces[last_index]["File"] = face["ButtonText"]
