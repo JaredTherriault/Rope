@@ -2266,6 +2266,9 @@ class GUI(tk.Tk):
             for j in range(len(temp0)):
                 new_source_face = self.source_face.copy()
 
+                new_source_face["IsMergedEmbedding"] = True
+                new_source_face["Visible"] = True
+
                 new_source_face["File"] = ""
                 new_source_face["ButtonState"] = False
                 new_source_face["LockedButtonState"] = False
@@ -2354,6 +2357,8 @@ class GUI(tk.Tk):
 
                             new_source_face = self.source_face.copy()
                             self.source_faces.append(new_source_face)
+                            
+                            self.source_faces[-1]["IsMergedEmbedding"] = False
 
                             self.source_faces[-1]["Image"] = ImageTk.PhotoImage(image=Image.fromarray(crop))
                             self.source_faces[-1]["Embedding"] = face_emb
