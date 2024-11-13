@@ -2968,28 +2968,33 @@ class GUI(tk.Tk):
 
     def filter_target_media(self, filter_text):
 
-        lowercase_filter_text = filter_text.lower()
+        tokens = self.tokenize_filter_text(filter_text)
 
         for button in self.target_media_buttons:
-            if lowercase_filter_text in button.media_file.lower():
-                button.visible = True
-            else:
-                button.visible = False
+            token_matches = [
+                token in button.media_file.lower() for token in tokens
+            ]
+            face["Visible"] = any(token_matches)
 
         self.redraw_target_media_canvas()
 
     def filter_source_faces(self, filter_text):
 
-        lowercase_filter_text = filter_text.lower()
+        tokens = self.tokenize_filter_text(filter_text)
 
         for face in self.source_faces:
-            comparison_text = face["ButtonText"].lower() if isinstance(face["File"], list) else face["File"].lower()
-            if lowercase_filter_text in comparison_text:
-                face["Visible"] = True
-            else:
-                face["Visible"] = False
+
+            comparison_text = face["File"].lower() + " facebutton"
+            if face["IsMergedEmbedding"]:
+                comparison_text = face["ButtonText"].lower() + " mergedembedding"
+
+            token_matches = [
+                token in comparison_text for token in tokens
+            ]
+            face["Visible"] = any(token_matches)
 
         self.redraw_source_faces_canvas()
+        self.redraw_merged_faces_canvas()
 
     def redraw_target_media_canvas(self,):
         # Clear all canvas items
