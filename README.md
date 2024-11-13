@@ -1,5 +1,12 @@
 Hobby fork. I develop from dev-merge. Check that branch out if you want to use the latest features, but keep in mind I move fast and break things.
 
+Please do not open an issue unless you can provide steps to reproduce and ideally the original media used, if applicable. Discretion and privacy are core values.
+
+Priorities:
+* Easier interaction with components
+* Streamlined real-time playback experience
+* Support for most file types found on the web
+
 ![image](https://github.com/Alucard24/Rope/releases/download/splash/splash_next.png)
 
 Next(Stable)-1.1.03
