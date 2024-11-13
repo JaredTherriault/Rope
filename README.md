@@ -1,6 +1,7 @@
 Hobby fork. I develop from dev-merge. Check that branch out if you want to use the latest features, but keep in mind I move fast and break things.
 
 Please do not open an issue unless you can provide steps to reproduce and ideally the original media used, if applicable. Discretion and privacy are core values.
+Feel free to submit a pull request anytime.
 
 Priorities:
 * Easier interaction with components
