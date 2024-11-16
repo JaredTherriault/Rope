@@ -1,4 +1,5 @@
 import os
+import shutil
 import traceback
 import cv2
 import tkinter as tk
@@ -90,7 +91,6 @@ class GUI(tk.Tk):
         self.input_videos_button = []
         self.input_videos_text = []
         self.target_media_canvas = []
-        self.source_faces_buttons = []
         self.input_videos_button = []
         self.input_faces_text = []
         self.shift_i_len = 0
@@ -1147,7 +1147,7 @@ class GUI(tk.Tk):
         self.merged_embedding_name = tk.StringVar()
         self.merged_embeddings_text = tk.Entry(button_frame, style.entry_2, textvariable=self.merged_embedding_name)
         self.merged_embeddings_text.place(x=8, y=8, width = 96, height=20)
-        self.merged_embeddings_text.bind("<Return>", lambda event: self.save_selected_source_faces(self.merged_embedding_name))
+        self.merged_embeddings_text.bind("<Return>", lambda event: self.save_selected_source_faces_to_embedding(self.merged_embedding_name))
         self.me_name = self.nametowidget(self.merged_embeddings_text)
 
         # Scroll Canvas
@@ -1806,6 +1806,7 @@ class GUI(tk.Tk):
                     # Clear all faces
                     self.clear_target_faces()
                     # reload input faces
+                    self.load_saved_embeddings()
                     self.load_input_faces()
             elif name == "ProvidersPriorityTextSel":
                 provider_value = self.models.switch_providers_priority(self.parameters[name])
@@ -2159,6 +2160,7 @@ class GUI(tk.Tk):
             return
 
         self.populate_target_videos()
+        self.load_saved_embeddings()
         self.load_input_faces()
         self.widget['StartButton'].enable_button()
 
@@ -2199,6 +2201,7 @@ class GUI(tk.Tk):
             json.dump(self.json_dict, outfile)
             outfile.close()
         self.widget['FacesFolderButton'].set(False, request_frame=False)
+        self.load_saved_embeddings()
         self.load_input_faces()
 
     def load_dfl_input_models(self):
@@ -2229,74 +2232,30 @@ class GUI(tk.Tk):
             new_source_face['TextWidth'] = text_width
             x_width = 20
             if len(self.source_faces)>0:
-                x_width += self.get_adjacent_element_width(j)
+                x_width += self.get_adjacent_element_width(self.source_faces, j)
             new_source_face['XCoord'] = x_width
             self.merged_faces_canvas.create_window(x_width,8+(22*(j%4)), window = new_source_face["TKButton"],anchor='nw')
             self.source_faces.append(new_source_face)
             j+=1
         pass
 
-    def get_adjacent_element_width(self, cur_index=0):
+    def get_adjacent_element_width(self, container, cur_index=0):
         x_width = 0
-        if len(self.source_faces)>=4 and cur_index>=4:
+        if len(container)>=4 and cur_index>=4:
             adjacent_elem_index = cur_index - 4
-            x_width = self.source_faces[adjacent_elem_index].get('XCoord',0) + self.source_faces[adjacent_elem_index].get('TextWidth',0)
+            x_width = container[adjacent_elem_index].get('XCoord',0) + container[adjacent_elem_index].get('TextWidth',0)
         return x_width
 
     def load_input_faces(self):
-        self.source_faces = []
-        self.merged_faces_canvas.delete("all")
+
+        # Remove only source faces that are not merged embeddings 
+        for i in range(len(self.source_faces) - 1, 0, -1):
+            if not self.source_faces[i]["IsMergedEmbedding"]:
+                self.source_faces.pop(i)
+                
         self.source_faces_canvas.delete("all")
 
         text_font = font.Font(family="Helvetica", size=10)
-
-        # First load merged embeddings
-        try:
-            temp0 = []
-            try:
-                with open("merged_embeddings.txt", "r") as embedfile:
-                    temp = embedfile.read().splitlines()
-
-                    for i in range(0, len(temp), 513):
-                        to = [temp[i][6:], np.array(temp[i+1:i+513], dtype='float32')]
-                        temp0.append(to)
-            except:
-                pass
-
-            for j in range(len(temp0)):
-                new_source_face = self.source_face.copy()
-
-                new_source_face["IsMergedEmbedding"] = True
-                new_source_face["Visible"] = True
-
-                new_source_face["File"] = ""
-                new_source_face["ButtonState"] = False
-                new_source_face["LockedButtonState"] = False
-                new_source_face["Embedding"] = temp0[j][1]
-                new_source_face["ButtonText"] = temp0[j][0]
-
-                text_width = text_font.measure('ABCDEFGHIJKLMNO')
-
-                new_source_face["TKButton"] = tk.Button(self.merged_faces_canvas, style.media_button_off_3, image=self.blank, text=new_source_face["ButtonText"], height=14, width=text_width, compound='left', anchor='w')
-
-                new_source_face["TKButton"].bind("<ButtonRelease-1>", lambda event, arg=j: self.select_input_faces(event, arg))
-                new_source_face["TKButton"].bind("<ButtonRelease-3>", lambda event, arg=j: self.select_input_faces(event, arg))
-                self.bind_scroll_events(new_source_face["TKButton"], lambda event, delta: self.merged_faces_canvas.xview_scroll(delta, "units"))
-                new_source_face['TextWidth'] = text_width
-                x_width = 20
-                if len(self.source_faces)>0:
-                    x_width += self.get_adjacent_element_width(j)
-                new_source_face['XCoord'] = x_width
-                self.merged_faces_canvas.create_window(x_width,8+(22*(j%4)), window = new_source_face["TKButton"],anchor='nw')
-                self.source_faces.append(new_source_face)
-
-            self.load_dfl_input_models()
-
-            self.merged_faces_canvas.configure(scrollregion = self.merged_faces_canvas.bbox("all"))
-            self.merged_faces_canvas.xview_moveto(0)
-
-        except Exception as e:
-            pass
 
         self.shift_i_len = len(self.source_faces)
 
@@ -2383,6 +2342,167 @@ class GUI(tk.Tk):
                         print('Bad file', file)
 
         torch.cuda.empty_cache()
+
+    def load_saved_embeddings(self):
+
+        # Remove only source faces that are merged embeddings 
+        for i in range(len(self.source_faces) - 1, 0, -1):
+            if self.source_faces[i]["IsMergedEmbedding"]:
+                self.source_faces.pop(i)
+
+        self.merged_faces_canvas.delete("all")
+        
+        text_font = font.Font(family="Helvetica", size=10)
+        
+        # First load merged embeddings
+        try:
+            temp0 = []
+            with open("merged_embeddings.txt", "r") as embedfile:
+                temp = embedfile.read().splitlines()
+                for i in range(0, len(temp), 513):
+                    to = [temp[i][6:], np.array(temp[i+1:i+513], dtype='float32')]
+                    temp0.append(to)
+        except:
+            pass
+        
+        # Create buttons from embeddings
+        embeddings = []
+        for j in range(len(temp0)):
+            new_source_face = self.create_new_embedding_face(temp0[j], j, text_font)
+            
+            x_width = 20
+            if len(embeddings) > 0:
+                x_width += self.get_adjacent_element_width(embeddings, j)
+
+            new_source_face['XCoord'] = x_width
+            new_source_face['YCoord'] = 8 + (22 * (j % 4))
+            
+            # Drag and drop
+            new_source_face["TKButton"].bind(
+                "<ButtonPress-1>", lambda event, arg=new_source_face: self.on_embedding_button_press(event, arg))
+            new_source_face["TKButton"].bind(
+                "<B1-Motion>", lambda event, arg=new_source_face: self.on_embedding_button_motion(event, arg))
+            new_source_face["TKButton"].bind(
+                "<ButtonRelease-1>", lambda event, arg=new_source_face: self.on_embedding_button_release(event, arg))
+
+            # Lock select
+            new_source_face["TKButton"].bind(
+                "<ButtonRelease-3>", lambda event, arg=new_source_face: self.select_input_faces(event, arg["CanvasIndex"]))
+            self.bind_scroll_events(
+                new_source_face["TKButton"], lambda event, delta: self.merged_faces_canvas.xview_scroll(delta, "units"))
+            
+            new_source_face["ItemId"] = self.merged_faces_canvas.create_window(
+                new_source_face['XCoord'], new_source_face['YCoord'], window=new_source_face["TKButton"], anchor='nw')
+            embeddings.append(new_source_face)
+
+        self.source_faces = embeddings + self.source_faces
+        self.load_dfl_input_models()
+        self.merged_faces_canvas.configure(scrollregion=self.merged_faces_canvas.bbox("all"))
+        self.merged_faces_canvas.xview_moveto(0)
+        
+    def create_new_embedding_face(self, face_data, index, text_font):
+        text_width = text_font.measure('ABCDEFGHIJKLMNO')
+        new_source_face = {
+            "IsMergedEmbedding": True,
+            "Visible": True,
+            "File": "",
+            "CanvasIndex": index,
+            "ButtonState": False,
+            "LockedButtonState": False,
+            "Embedding": face_data[1],
+            "ButtonText": face_data[0],
+            "TextWidth": text_width,
+            "TKButton": tk.Button(
+                self.merged_faces_canvas, style.media_button_off_3, image=self.blank, 
+                text=face_data[0], height=14, width=text_width, compound='left', anchor='w'),
+        }
+        return new_source_face
+
+    def on_embedding_button_press(self, event, face):
+        """Starts the drag operation."""
+        self.drag_and_drop_payload = {}
+        self.drag_and_drop_payload["DragState"] = "drag_start"
+        self.drag_and_drop_payload["Face"] = face
+
+    def on_embedding_button_motion(self, event, face):
+        """Move the dragged button along with the mouse."""
+        if hasattr(self, 'drag_and_drop_payload'):
+            self.drag_and_drop_payload["DragState"] = "drag_motion"
+
+            if not "OriginalBG" in self.drag_and_drop_payload:
+                self.drag_and_drop_payload["OriginalBG"] = self.drag_and_drop_payload["Face"]["TKButton"].cget("bg")
+                self.drag_and_drop_payload["OriginalFG"] = self.drag_and_drop_payload["Face"]["TKButton"].cget("fg")
+                self.drag_and_drop_payload["OriginalActiveBG"] = self.drag_and_drop_payload["Face"]["TKButton"].cget("activebackground")
+                self.drag_and_drop_payload["Face"]["TKButton"].config(
+                    bg=style.media_button_on_drag_start_3["bg"], 
+                    fg=style.media_button_on_drag_start_3["fg"],
+                    activebackground=style.media_button_on_drag_start_3["activebackground"])
+
+    def on_embedding_button_release(self, event, face):
+        """Finalizes the drop operation."""
+
+        if "OriginalBG" in self.drag_and_drop_payload:
+            self.drag_and_drop_payload["Face"]["TKButton"].config(
+                bg=self.drag_and_drop_payload["OriginalBG"])
+            self.drag_and_drop_payload["Face"]["TKButton"].config(
+                bg=self.drag_and_drop_payload["OriginalFG"])
+            self.drag_and_drop_payload["Face"]["TKButton"].config(
+                activebackground=self.drag_and_drop_payload["OriginalActiveBG"])
+            del self.drag_and_drop_payload["OriginalBG"]
+            del self.drag_and_drop_payload["OriginalFG"]
+            del self.drag_and_drop_payload["OriginalActiveBG"]
+
+        if hasattr(self, 'drag_and_drop_payload'):
+
+            if self.drag_and_drop_payload["DragState"] == "drag_motion":
+                
+                # Place the button at the new position
+                new_x = face["XCoord"] + event.x
+                new_y = face["YCoord"] + event.y
+
+                # Find where to drop (which button order is affected)
+                target_index = self.find_embedding_button_drop_target(new_x, new_y)
+                original_index = self.source_faces.index(self.drag_and_drop_payload["Face"])
+                self.source_faces.pop(original_index)
+                # if original_index > target_index:
+                #     target_index -= 1
+                self.source_faces.insert(target_index, self.drag_and_drop_payload["Face"])
+                self.redraw_merged_faces_canvas()
+
+                # Remove dragging state
+                self.drag_and_drop_payload["Face"]["TKButton"].config(relief="flat")
+                self.drag_and_drop_payload["DragState"] = "drag_end"
+                self.resave_all_saved_embeddings()
+                return
+        
+        self.select_input_faces(event, face["CanvasIndex"])
+
+    def find_embedding_button_drop_target(self, x, y):
+        """Find the drop target button index based on the mouse position."""
+        for idx, face in enumerate(self.source_faces):
+            button_coords = self.merged_faces_canvas.coords(face["ItemId"])
+            button_x, button_y = button_coords[0], button_coords[1]
+
+            # Simple check if mouse is within button bounds
+            if button_x <= x <= button_x + 100 and button_y <= y <= button_y + 20:
+                return idx
+        return len(self.source_faces)  # Drop at the end if no button is under the cursor    
+
+    def resave_all_saved_embeddings(self):
+
+        embeddings = []
+        # Remove only source faces that are merged embeddings 
+        for i in range(len(self.source_faces)):
+            if self.source_faces[i]["IsMergedEmbedding"]:
+                embeddings.append(self.source_faces[i])
+
+        if embeddings:
+
+            self.backup_saved_embeddings()
+            with open("merged_embeddings.txt", "w") as embedfile:
+                for emb in embeddings:
+                    self.write_embedding_to_file(
+                        embedfile, emb["ButtonText"], emb["Embedding"])
 
     def on_click_find_faces_button(self):
         auto_swap_state = self.widget['AutoSwapTextSel'].get()
@@ -2644,8 +2764,11 @@ class GUI(tk.Tk):
             self.selected_source_faces[last_index]["ButtonState"] = False
 
             # Add image or text to button
-            face_image = face["Image"]
-            if isinstance(face_image, list):
+            if "Image" in face:
+                # If using an image, ensure it's resized to fit within the button
+                self.selected_source_faces[last_index]["Image"] = face["Image"]
+                button.config(image=self.selected_source_faces[last_index]["Image"])
+            else:
                 button.config(
                     text=f"{face['ButtonText']}", 
                     compound='center', 
@@ -2653,10 +2776,6 @@ class GUI(tk.Tk):
                     wraplength=size,   # Limit text to fit within button size
                     padx=0, pady=0
                 )
-            else:
-                # If using an image, ensure it's resized to fit within the button
-                self.selected_source_faces[last_index]["Image"] = face_image
-                button.config(image=self.selected_source_faces[last_index]["Image"])
 
             # Add both button and entry to canvas
             pad_x = 6
@@ -2713,11 +2832,8 @@ class GUI(tk.Tk):
                         if self.source_faces[j]["ButtonState"] or face_locked:
                             tface["SourceFaceAssignments"].append(j)
                             selected_face = add_selected_face_to_selected_faces_canvas(self.source_faces[j], default_weight_list, cached_weights)
-                            # Only append embedding if it is not a DFL model
-                            if not self.source_faces[j]['DFLModel']:
-                                temp_holder.append(selected_face['Embedding'])
 
-                            if self.source_faces[j]['DFLModel']:
+                            if "DFLModel" in self.source_faces[j] and self.source_faces[j]['DFLModel']:
                                 # Clear DFL models from memory
                                 if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
                                     for model in list(self.models.dfl_models):
@@ -2725,6 +2841,9 @@ class GUI(tk.Tk):
                                         del self.models.dfl_models[model]
                                     gc.collect()
                                 tface['DFLModel'] = self.source_faces[j]['DFLModel']
+                            else:                            
+                                # Only append embedding if it is not a DFL model
+                                temp_holder.append(selected_face['Embedding'])
 
                     # do averaging
                     if temp_holder:
@@ -3065,8 +3184,11 @@ class GUI(tk.Tk):
         for i, face in enumerate(visible_items):
             x_width = 20
             if len(self.source_faces)>0:
-                x_width += self.get_adjacent_element_width(i)
-            face["ItemId"] = self.merged_faces_canvas.create_window(x_width,8+(22*(i%4)), window = visible_items[i]["TKButton"],anchor='nw')
+                x_width += self.get_adjacent_element_width(self.source_faces, i)
+            face['XCoord'] = x_width
+            face['YCoord'] = 8 + (22 * (i % 4))
+            face["ItemId"] = self.merged_faces_canvas.create_window(
+                face['XCoord'], face['YCoord'], window = visible_items[i]["TKButton"], anchor='nw')
             face["CanvasIndex"] = i
 
         self.static_widget['input_faces_scrollbar'].resize_scrollbar(None)
@@ -3575,41 +3697,41 @@ class GUI(tk.Tk):
         else:
             return []
 
+    def backup_saved_embeddings(self):
+        if os.path.exists("merged_embeddings.txt"):
+            if os.path.exists("merged_embeddings.txt.bak"):
+                os.remove("merged_embeddings.txt.bak")
+            shutil.copy("merged_embeddings.txt", "merged_embeddings.txt.bak")
+
+    def write_embedding_to_file(self, embedfile, name, embedding):
+        identifier = "Name: " + name
+        embedfile.write("%s\n" % identifier)
+        for number in embedding:
+            embedfile.write("%s\n" % number)
 
 # refactor and thread i/o
-    def save_selected_source_faces(self, text):
+    def save_selected_source_faces_to_embedding(self, text):
         # get name from text field
         text = text.get()
-        # get embeddings from all highlightebuttons
-        # iterate through the buttons
 
-        temp_holder = []
+        ave_embedding = []
 
-        for button in self.source_faces:
-            if button["ButtonState"]:
-                temp_holder.append(button['Embedding'])
+        for tface in self.target_faces:
+            if tface["ButtonState"]:
+                ave_embedding = tface['AssignedEmbedding']
 
-        if temp_holder:
-            
-            ave_embedding = self.merge_embeddings(temp_holder)
-
-            for tface in self.target_faces:
-                if tface["ButtonState"]:
-                    ave_embedding = tface['AssignedEmbedding']
-
+        if not isinstance(ave_embedding, list):
             if text != "":
+                self.backup_saved_embeddings()
                 with open("merged_embeddings.txt", "a") as embedfile:
-                    identifier = "Name: "+text
-                    embedfile.write("%s\n" % identifier)
-                    for number in ave_embedding:
-                        embedfile.write("%s\n" % number)
+                    self.write_embedding_to_file(embedfile, text, ave_embedding)
             else:
                 print('No embedding name specified')
         else:
-            print('No Source Images selected')
+            print('No Target Face selected')
 
         self.focus()
-        self.load_input_faces()
+        self.load_saved_embeddings()
 
 # refactor and thread i/o
     def delete_merged_embedding(self): #add multi select
@@ -3642,7 +3764,7 @@ class GUI(tk.Tk):
                     for i in range(512):
                         embedfile.write("%s\n" % line[1][i])
 
-        self.load_input_faces()
+        self.load_saved_embeddings()
 
     def iterate_through_merged_embeddings(self, event, delta):
         if delta>0:
