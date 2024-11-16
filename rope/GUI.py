@@ -3468,11 +3468,15 @@ class GUI(tk.Tk):
             self.toggle_play_video("play")
 
         for i in range(len(self.target_media_buttons)):
-            if self.target_media_buttons[i].visible:
-                if self.target_media_buttons[i].media_file == media_file:
-                    self.target_media_buttons[i].config(style.media_button_on_3)
+            button = self.target_media_buttons[i]
+            if button.visible:
+                if button.media_file == media_file:
+                    button.config(style.media_button_on_3)
                 else:
-                    self.target_media_buttons[i].config(style.media_button_off_3)
+                    try:
+                        button.config(style.media_button_off_3)
+                    except:
+                        pass
 
         # delete all markers
         self.layer['markers_canvas'].delete('all')
