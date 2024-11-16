@@ -3061,102 +3061,114 @@ class GUI(tk.Tk):
             else:
                 # Its an image
                 if file_type == 'image':
-                    is_animated = False
-                    try:
+                    is_animated = self.check_if_animated(file)
 
-                        def open_cv():
-                            image = cv2.imread(file)
-                            return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    if is_animated == True:
+                        videos.append([None, file])
+                    elif is_animated == False:
+                        images.append([None, file])
+                    elif is_animated == None: # Other file type or read error
 
-                        def open_pil():
-                            with Image.open(file) as img:
-
-                                frames = list(ImageSequence.Iterator(img))
-
-                                if len(frames) > 1:
-                                    is_animated = True
-
-                                # If it's an animated GIF, use the first frame
-                                img = img.convert('RGB')  # Ensure it has RGB mode
-                                return np.array(img), is_animated
-
-                        try:
-                            # Prioritize pil for webp and gif images
-                            if file.endswith(".webp") or file.endswith(".gif"):
-                                image, is_animated = open_pil()
-                            else:
-                                image = open_cv()
-                        except:
-                            if file.endswith(".webp") or file.endswith(".gif"):
-                                image = open_cv()
-                            else:
-                                image, is_animated = open_pil()
-
-                    except Exception as e:
-                        print(f"Trouble reading file '{file}': {e}")
-                    else:
-                        ratio = float(image.shape[0]) / image.shape[1]
-
-                        new_height = 100
-                        new_width = int(new_height / ratio)
-                        image = cv2.resize(image, (new_width, new_height))
-                        image[:new_height, :new_width, :] = image
-
-                        if is_animated:
-                            videos.append([image, file])
+                        # Check against lookup of known non-animated types
+                        _, ext = os.path.splitext(os.path.basename(file.lower()))
+                        is_not_animated = ext in non_animated_image_formats 
+                        if is_not_animated == True:
+                            images.append([None, file])
                         else:
-                            images.append([image, file])
+                            # print(f"Could not determine if animated from metadata: '{file}'")
+                            try:
+                                def open_cv():
+                                    image = cv2.imread(file)
+                                    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                                def open_pil():
+                                    with Image.open(file) as img:
+
+                                        frames = list(ImageSequence.Iterator(img))
+
+                                        if len(frames) > 1:
+                                            is_animated = True
+
+                                        # If it's an animated GIF, use the first frame
+                                        img = img.convert('RGB')  # Ensure it has RGB mode
+                                        return np.array(img), is_animated
+
+                                try:
+                                    # Prioritize pil for webp and gif images
+                                    if file.endswith(".webp") or file.endswith(".gif"):
+                                        image, is_animated = open_pil()
+                                    else:
+                                        image = open_cv()
+                                except:
+                                    if file.endswith(".webp") or file.endswith(".gif"):
+                                        image = open_cv()
+                                    else:
+                                        image, is_animated = open_pil()
+
+                            except Exception as e:
+                                print(f"Trouble reading file '{file}': {e}")
+                            else:
+                                ratio = float(image.shape[0]) / image.shape[1]
+
+                                new_height = 100
+                                new_width = int(new_height / ratio)
+                                image = cv2.resize(image, (new_width, new_height))
+                                image[:new_height, :new_width, :] = image
+
+                                if is_animated:
+                                    videos.append([image, file])
+                                else:
+                                    images.append([image, file])
 
                 # If it's a mimetype of video, we will render thumbnails asynchronously
                 elif file_type == 'video':
                     videos.append([None,file])
 
+        ratio = float(self.splash_image.shape[0]) / self.splash_image.shape[1]
+
+        new_height = 100
+        new_width = int(new_height / ratio)
+        self.placeholder_image = cv2.resize(self.splash_image, (new_width, new_height))
+        self.placeholder_image[:new_height, :new_width, :] = self.placeholder_image
+        
+        self.placeholder_thumbnail = ImageTk.PhotoImage(image=Image.fromarray(self.placeholder_image))
+
+        def create_target_media(i, container):
+
+            image = container[i][0]
+            media_file = container[i][1]
+            has_thumbnail = True if image is not None else False
+
+            button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 165)
+            button.visible = True
+            self.target_media_buttons.append(button)
+            self.target_media.append(
+                ImageTk.PhotoImage(image=Image.fromarray(image)) if has_thumbnail else self.placeholder_thumbnail)
+
+            filename = os.path.basename(media_file)
+            hovertip = RopeHovertip(button, filename, x_offset=190)
+            if len(filename)>32:
+                filename = filename[:29]+'...'
+
+            self.bind_scroll_events(button, self.target_videos_mouse_wheel)
+            button.config(
+                image = self.target_media[i], text=filename, compound='top', anchor='n',
+                command=lambda i=i: self.load_target(media_file, self.widget['PreviewModeTextSel'].get()))
+            button.media_file = media_file
+            button.original_index = i
+            button.has_thumbnail = has_thumbnail
+
         if self.widget['PreviewModeTextSel'].get()== 'Image':#images
             for i in range(len(images)):
-                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 180)
-                button.visible = True
-                self.target_media_buttons.append(button)
 
-                rgb_video = Image.fromarray(images[i][0])
-                self.target_media.append(ImageTk.PhotoImage(image=rgb_video))
-                button.config( image = self.target_media[i],  command=lambda i=i: self.load_target(images[i][1], self.widget['PreviewModeTextSel'].get()))
-                button.media_file = images[i][1]
-                button.original_index = i
-                self.bind_scroll_events(button, self.target_videos_mouse_wheel)
-                button.has_thumbnail = True
+                create_target_media(i, images)
 
         elif self.widget['PreviewModeTextSel'].get()=='Video':#videos
 
-            ratio = float(self.splash_image.shape[0]) / self.splash_image.shape[1]
-
-            new_height = 100
-            new_width = int(new_height / ratio)
-            placeholder_image = cv2.resize(self.splash_image, (new_width, new_height))
-            placeholder_image[:new_height, :new_width, :] = placeholder_image
-            
-            placeholder_thumbnail = ImageTk.PhotoImage(image=Image.fromarray(placeholder_image))
-
             for i in range(len(videos)):
 
-                image = videos[i][0]
-                has_thumbnail = True if image is not None else False
-
-                button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 165)
-                button.visible = True
-                self.target_media_buttons.append(button)
-                self.target_media.append(ImageTk.PhotoImage(image=Image.fromarray(image)) if has_thumbnail else placeholder_thumbnail)
-
-                filename = os.path.basename(videos[i][1])
-                hovertip = RopeHovertip(button, filename, x_offset=190)
-                if len(filename)>32:
-                    filename = filename[:29]+'...'
-
-                self.bind_scroll_events(button, self.target_videos_mouse_wheel)
-                button.config(image = self.target_media[i], text=filename, compound='top', anchor='n',command=lambda i=i: self.load_target(videos[i][1], self.widget['PreviewModeTextSel'].get()))
-                button.media_file = videos[i][1]
-                button.original_index = i
-                button.has_thumbnail = has_thumbnail
-
+                create_target_media(i, videos)
+                
         self.target_media_shuffle_history = set()
         self.all_target_media_thumbnails_generated = False
         self.redraw_target_media_canvas()
