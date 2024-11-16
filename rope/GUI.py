@@ -39,6 +39,14 @@ from rope.Hovertip import RopeHovertip
 import gc
 
 def process_video(file):
+
+    def resize_video(video_frame):
+        ratio = float(video_frame.shape[0]) / video_frame.shape[1]
+        new_height = 100
+        new_width = int(new_height / ratio)
+        video_frame = cv2.resize(video_frame, (new_width, new_height))
+        return video_frame
+
     try:
         video = cv2.VideoCapture(file)
         if video.isOpened():
@@ -47,19 +55,30 @@ def process_video(file):
 
             if success:
                 video_frame = cv2.cvtColor(video_frame, cv2.COLOR_BGR2RGB)
-                ratio = float(video_frame.shape[0]) / video_frame.shape[1]
-                new_height = 100
-                new_width = int(new_height / ratio)
-                video_frame = cv2.resize(video_frame, (new_width, new_height))
-                return video_frame
+                return resize_video(video_frame)
             else:
                 print('Trouble reading file:', file)
+                raise ValueError("Failed to read video frame")
         else:
             print('Trouble opening file:', file)
+            raise ValueError("Failed to read video frame")
     except Exception as e:
-        print('Error processing file:', file, e)
+        print('Error processing file with CV, trying PIL:', file, e)
+
+        try:
+            with Image.open(file) as img:
+
+                video_frame = img.convert('RGB')  # Ensure it has RGB mode
+                video_frame = np.array(img)
+                return resize_video(video_frame)
+
+        except Exception as e:
+            print('Error processing file with PIL, aborting:', file, e)
     finally:
-        video.release()
+        try:
+            video.release()
+        except:
+            pass
 
     return None
 
