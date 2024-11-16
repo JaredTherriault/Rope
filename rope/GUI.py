@@ -2956,6 +2956,58 @@ class GUI(tk.Tk):
 
         assign_embeddings_to_target_face()
 
+    def is_animated_gif(self, file):
+        with open(file, 'rb') as f:
+            # Check for GIF header (GIF87a or GIF89a)
+            if f.read(6) in [b'GIF87a', b'GIF89a']:
+                # GIF animation is indicated by the Graphics Control Extension (GCE)
+                block = f.read(1)
+                while block:
+                    if block == b'\x21':  # Extension Introducer byte
+                        block_type = f.read(1)
+                        if block_type == b'\xf9':  # Graphics Control Extension
+                            # Skip the block length (1 byte), and the rest of the block
+                            f.read(7)
+                            return True  # Animated GIF
+                    block = f.read(1)
+        return None  # Not an animated GIF
+
+    def is_animated_apng(self, file):
+        with open(file, 'rb') as f:
+            # Check for PNG signature
+            if f.read(8) == b'\x89PNG\r\n\x1a\n':
+                # APNG animation is indicated by acTL chunk
+                while True:
+                    chunk_len = struct.unpack('>I', f.read(4))[0]  # Read chunk length
+                    chunk_type = f.read(4).decode('utf-8')  # Read chunk type
+                    
+                    if chunk_type == 'acTL':  # Animation Control Chunk
+                        return True  # Animated PNG
+                    elif chunk_type == 'IEND':  # End of file
+                        break
+                    else:
+                        f.read(chunk_len + 4)  # Skip the chunk data and CRC
+        return None  # Not an animated APNG
+
+    def is_animated_webp(self, file):
+        with open(file, 'rb') as f:
+            # Check WebP signature
+            chunk = f.read(128)
+            if b'RIFF' in chunk and b'WEBP' in chunk:
+                if b'ANIM' in chunk:  # Animation chunk
+                    return True  # Animated WebP
+                else:
+                    return False
+        return None  # Not an animated WebP
+
+    def check_if_animated(self, file):
+        if file.lower().endswith('.gif'):
+            return self.is_animated_gif(file)
+        elif file.lower().endswith('.apng'):
+            return self.is_animated_apng(file)
+        elif file.lower().endswith('.webp'):
+            return self.is_animated_webp(file)
+        return None  # Other formats
 
     def populate_target_videos(self):
         videos = []
