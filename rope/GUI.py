@@ -3044,7 +3044,15 @@ class GUI(tk.Tk):
         self.target_media_buttons = []
         self.target_media_canvas.delete("all")
 
-        for file in filenames: # Does not include full path
+        non_animated_image_formats = [
+            ".bmp", ".jpeg", ".jpg", ".png", ".tiff", ".tif", ".raw", 
+            ".heif", ".heic", ".webp", ".pdf", ".ico", ".avif", ".exr"]
+
+        file_count = len(filenames)
+        for i in range(file_count): # Does not include full path
+            file = filenames[i]
+            if i % 100 == 0:
+                print(f"Evaluating {i}/{file_count}: '{file}'")
             # Guess File type based on extension
             try:
                 file_type = mimetypes.guess_type(file)[0][:5]
