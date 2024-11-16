@@ -22,3 +22,5 @@ tensorrt-engines-cu118/
 tensorrt-engines-cu124/
 Rope-cu118.bat
 Rope-cu124.bat
+*.bak
+*.orig_bak
