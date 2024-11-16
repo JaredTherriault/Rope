@@ -606,7 +606,7 @@ class VideoManager():
 
     def get_current_frame_skip_value(self):
 
-        if 'FrameSkipModeTextSel' not in self.parameters or  'FramesToSkip' not in self.parameters:
+        if 'FrameSkipModeTextSel' not in self.parameters or  'FramesToSkip' not in self.parameters or self.record:
             return 0
 
         if self.parameters['FrameSkipModeTextSel'] == "manual":
@@ -729,7 +729,8 @@ class VideoManager():
                         msg = "%s fps, %s process time" % (fps, round(self.process_qs[index]['ThreadTime'], 4))
                         self.fps_average = []
 
-                    if processed_frame_number >= self.video_frame_total-1 or processed_frame_number == self.stop_marker:
+                    end_frame = self.video_frame_total - 1 - self.get_current_frame_skip_value()
+                    if processed_frame_number >= end_frame or processed_frame_number == self.stop_marker:
                         
                         action = self.control['AfterPlaybackTextSel']
 
