@@ -2482,6 +2482,7 @@ class GUI(tk.Tk):
         
         if should_select_embedding:
             self.select_input_faces(event, face["CanvasIndex"])
+        self.update_source_faces_highlights()
 
     def find_embedding_button_drop_target(self, x, y):
         """Find the drop target button index based on the mouse position."""
@@ -2649,30 +2650,31 @@ class GUI(tk.Tk):
             if should_clear_locked_button_state:
                 face["LockedButtonState"] = False
 
-    def select_input_faces(self, event, button):
-
-        def higlight_selected_faces(button_index):
-            # Highlight all of input faces buttons that have a true state
-            for face in self.source_faces:
-                face_locked = "LockedButtonState" in face and face["LockedButtonState"] == True
-                if face["ButtonState"] or face_locked:
+    def update_source_faces_highlights(self, button_index = None):
+        # Highlight all of input faces buttons that have a true state
+        for face in self.source_faces:
+            face_locked = "LockedButtonState" in face and face["LockedButtonState"] == True
+            if face["ButtonState"] or face_locked:
+                
+                if face_locked:
+                    face["TKButton"].config(style.media_button_on_lock_3)
+                else:
+                    face["TKButton"].config(style.media_button_on_3)
                     
-                    if face_locked:
-                        face["TKButton"].config(style.media_button_on_lock_3)
-                    else:
-                        face["TKButton"].config(style.media_button_on_3)
-                        
-                    if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
-                        self.add_action("load_target_image", face["File"])
-                        self.image_loaded = True
+                if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
+                    self.add_action("load_target_image", face["File"])
+                    self.image_loaded = True
 
-                # Clear DFL models from memory
+            # Clear DFL models from memory
+            if button_index is not None:
                 if self.models.dfl_models and self.parameters['DFLLoadOnlyOneSwitch']:
                     for model in list(self.models.dfl_models):
                         if model!=self.source_faces[button_index]['DFLModel']:
                             del self.models.dfl_models[model]._sess
                             del self.models.dfl_models[model]
                     gc.collect()
+
+    def select_input_faces(self, event, button):
 
         def get_default_face_weights():
             return [
@@ -2931,7 +2933,7 @@ class GUI(tk.Tk):
                 self.source_faces[button]["LockedButtonState"] = not face_locked
                 self.source_faces[button]["ButtonState"] = self.source_faces[button]["LockedButtonState"]
                 
-            higlight_selected_faces(button)
+            self.update_source_faces_highlights(button)
             
         elif modifier == 'random':    
 
@@ -2950,7 +2952,7 @@ class GUI(tk.Tk):
                 shuffle(available_indices)
                 random_index = available_indices[0]
                 self.source_faces[random_index]["ButtonState"] = True
-                higlight_selected_faces(random_index)
+                self.update_source_faces_highlights(random_index)
 
         assign_embeddings_to_target_face()
 
