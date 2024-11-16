@@ -3207,7 +3207,7 @@ class GUI(tk.Tk):
         self.redraw_source_faces_canvas()
         self.redraw_merged_faces_canvas()
 
-    def redraw_target_media_canvas(self,):
+    def redraw_target_media_canvas(self):
         # Clear all canvas items
         self.target_media_canvas.delete("all")
 
