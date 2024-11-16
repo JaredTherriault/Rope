@@ -2449,9 +2449,6 @@ class GUI(tk.Tk):
             self.drag_and_drop_payload["DragState"] = "drag_motion"
 
             if not "OriginalBG" in self.drag_and_drop_payload:
-                self.drag_and_drop_payload["OriginalBG"] = self.drag_and_drop_payload["Face"]["TKButton"].cget("bg")
-                self.drag_and_drop_payload["OriginalFG"] = self.drag_and_drop_payload["Face"]["TKButton"].cget("fg")
-                self.drag_and_drop_payload["OriginalActiveBG"] = self.drag_and_drop_payload["Face"]["TKButton"].cget("activebackground")
                 self.drag_and_drop_payload["Face"]["TKButton"].config(
                     bg=style.media_button_on_drag_start_3["bg"], 
                     fg=style.media_button_on_drag_start_3["fg"],
@@ -2460,17 +2457,7 @@ class GUI(tk.Tk):
     def on_embedding_button_release(self, event, face):
         """Finalizes the drop operation."""
 
-        if "OriginalBG" in self.drag_and_drop_payload:
-            self.drag_and_drop_payload["Face"]["TKButton"].config(
-                bg=self.drag_and_drop_payload["OriginalBG"])
-            self.drag_and_drop_payload["Face"]["TKButton"].config(
-                bg=self.drag_and_drop_payload["OriginalFG"])
-            self.drag_and_drop_payload["Face"]["TKButton"].config(
-                activebackground=self.drag_and_drop_payload["OriginalActiveBG"])
-            del self.drag_and_drop_payload["OriginalBG"]
-            del self.drag_and_drop_payload["OriginalFG"]
-            del self.drag_and_drop_payload["OriginalActiveBG"]
-
+        should_select_embedding = True
         if hasattr(self, 'drag_and_drop_payload'):
 
             if self.drag_and_drop_payload["DragState"] == "drag_motion":
@@ -2482,19 +2469,19 @@ class GUI(tk.Tk):
                 # Find where to drop (which button order is affected)
                 target_index = self.find_embedding_button_drop_target(new_x, new_y)
                 original_index = self.source_faces.index(self.drag_and_drop_payload["Face"])
-                self.source_faces.pop(original_index)
-                # if original_index > target_index:
-                #     target_index -= 1
-                self.source_faces.insert(target_index, self.drag_and_drop_payload["Face"])
-                self.redraw_merged_faces_canvas()
+
+                if target_index != original_index:
+                    self.source_faces.pop(original_index)
+                    self.source_faces.insert(target_index, self.drag_and_drop_payload["Face"])
+                    self.redraw_merged_faces_canvas()
+                    self.resave_all_saved_embeddings()
+                    should_select_embedding = False
 
                 # Remove dragging state
-                self.drag_and_drop_payload["Face"]["TKButton"].config(relief="flat")
                 self.drag_and_drop_payload["DragState"] = "drag_end"
-                self.resave_all_saved_embeddings()
-                return
         
-        self.select_input_faces(event, face["CanvasIndex"])
+        if should_select_embedding:
+            self.select_input_faces(event, face["CanvasIndex"])
 
     def find_embedding_button_drop_target(self, x, y):
         """Find the drop target button index based on the mouse position."""
