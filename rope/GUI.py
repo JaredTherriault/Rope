@@ -2447,11 +2447,10 @@ class GUI(tk.Tk):
         if hasattr(self, 'drag_and_drop_payload'):
             self.drag_and_drop_payload["DragState"] = "drag_motion"
 
-            if not "OriginalBG" in self.drag_and_drop_payload:
-                self.drag_and_drop_payload["Face"]["TKButton"].config(
-                    bg=style.media_button_on_drag_start_3["bg"], 
-                    fg=style.media_button_on_drag_start_3["fg"],
-                    activebackground=style.media_button_on_drag_start_3["activebackground"])
+            self.drag_and_drop_payload["Face"]["TKButton"].config(
+                bg=style.media_button_on_drag_start_3["bg"], 
+                fg=style.media_button_on_drag_start_3["fg"],
+                activebackground=style.media_button_on_drag_start_3["activebackground"])
 
     def on_embedding_button_release(self, event, face):
         """Finalizes the drop operation."""
