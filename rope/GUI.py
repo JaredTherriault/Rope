@@ -3054,7 +3054,7 @@ class GUI(tk.Tk):
         for i in range(file_count): # Does not include full path
             file = filenames[i]
             if i % 100 == 0:
-                print(f"Evaluating {i}/{file_count}: '{file}'")
+                print(f"Evaluating file {i}/{file_count}")
             # Guess File type based on extension
             try:
                 file_type = mimetypes.guess_type(file)[0][:5]
