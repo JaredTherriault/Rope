@@ -89,7 +89,6 @@ class GUI(tk.Tk):
         self.models = models
         self.title_text = 'Rope-Next-00'
         self.title(self.title_text)
-        self.target_media = []
         self.target_video_file = []
         self.action_q = []
         self.video_image = []
@@ -3040,7 +3039,6 @@ class GUI(tk.Tk):
 
         images = []
         video_files = []
-        self.target_media = []
         self.target_media_buttons = []
         self.target_media_canvas.delete("all")
 
@@ -3142,7 +3140,7 @@ class GUI(tk.Tk):
             button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 165)
             button.visible = True
             self.target_media_buttons.append(button)
-            self.target_media.append(
+            button.photo_image = (
                 ImageTk.PhotoImage(image=Image.fromarray(image)) if has_thumbnail else self.placeholder_thumbnail)
 
             filename = os.path.basename(media_file)
@@ -3152,10 +3150,9 @@ class GUI(tk.Tk):
 
             self.bind_scroll_events(button, self.target_videos_mouse_wheel)
             button.config(
-                image = self.target_media[i], text=filename, compound='top', anchor='n',
+                image = button.photo_image, text=filename, compound='top', anchor='n',
                 command=lambda i=i: self.load_target(media_file, self.widget['PreviewModeTextSel'].get()))
             button.media_file = media_file
-            button.original_index = i
             button.has_thumbnail = has_thumbnail
 
         if self.widget['PreviewModeTextSel'].get()== 'Image':#images
@@ -3341,7 +3338,7 @@ class GUI(tk.Tk):
 
         if frame is not None:
             thumbnail = ImageTk.PhotoImage(image=Image.fromarray(frame))
-            self.target_media[button.original_index] = thumbnail
+            button.photo_image = thumbnail
             button.config(image = thumbnail)
             button.has_thumbnail = True
 
@@ -4135,7 +4132,6 @@ class GUI(tk.Tk):
 
         # If a matching media item is found, remove it
         if found_media_index != -1:
-            self.target_media.pop(found_media_index)
             self.target_media_buttons.pop(found_media_index)
 
             # Redraw all remaining items (this is an alternative to repositioning)
