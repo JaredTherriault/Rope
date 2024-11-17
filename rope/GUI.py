@@ -2654,13 +2654,16 @@ class GUI(tk.Tk):
         # Highlight all of input faces buttons that have a true state
         for face in self.source_faces:
             face_locked = "LockedButtonState" in face and face["LockedButtonState"] == True
-            if face["ButtonState"] or face_locked:
                 
-                if face_locked:
-                    face["TKButton"].config(style.media_button_on_lock_3)
-                else:
-                    face["TKButton"].config(style.media_button_on_3)
-                    
+            if face_locked:
+                face["TKButton"].config(style.media_button_on_lock_3)
+            elif face["ButtonState"] == True:
+                face["TKButton"].config(style.media_button_on_3)
+            else:
+                face["TKButton"].config(style.media_button_off_3)
+                            
+            if face["ButtonState"] or face_locked:
+
                 if self.widget['PreviewModeTextSel'].get() == 'FaceLab':
                     self.add_action("load_target_image", face["File"])
                     self.image_loaded = True
