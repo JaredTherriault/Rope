@@ -3186,7 +3186,7 @@ class GUI(tk.Tk):
             token_matches = [
                 token in button.media_file.lower() for token in tokens
             ]
-            face["Visible"] = any(token_matches)
+            button.visible = any(token_matches)
 
         self.redraw_target_media_canvas()
 
