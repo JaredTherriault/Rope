@@ -731,6 +731,8 @@ class VideoManager():
 
                     end_frame = self.video_frame_total - 1 - self.get_current_frame_skip_value()
                     if processed_frame_number >= end_frame or processed_frame_number == self.stop_marker:
+
+                        self.play_video("stop")
                         
                         action = self.control['AfterPlaybackTextSel']
 
@@ -739,13 +741,9 @@ class VideoManager():
                                 self.current_frame = 0
                                 self.play_video("play")
                         elif action == 'next':
-                            self.play_video("stop")
                             self.add_action("function", "gui.select_next_target_media()")
                         elif action == 'shuffle':
-                            self.play_video("stop")
                             self.add_action("function", "gui.select_random_target_media()")
-                        else:
-                            self.play_video('stop')
 
                     actual_thread_delta_time = self.process_qs[index]['ThreadTime']
 
