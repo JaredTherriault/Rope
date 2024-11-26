@@ -5,7 +5,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog, font
 import numpy as np
-from PIL import Image, ImageTk, ImageSequence
+from PIL import Image, ImageTk, ImageSequence, PngImagePlugin
 import json
 import time
 import copy
@@ -4123,8 +4123,26 @@ class GUI(tk.Tk):
         if len(self.media_file_name) > 0:
             filename =  self.media_file_name[0]+"_"+str(time.time())[:10]
             filename = os.path.join(self.json_dict["saved videos"], filename)
-            cv2.imwrite(filename+'.png', cv2.cvtColor(self.video_image, cv2.COLOR_BGR2RGB))
-            print('Image saved as:', filename+'.png')
+            filename_with_ext = filename + '.png'
+
+            try: # Copy metadata from other PNG (such as from Stable Diffusion)
+                if "png" in self.media_file_name[1].lower() and os.path.exists(self.media_file):
+
+                    source_image = Image.open(self.media_file)
+                    metadata = source_image.info 
+
+                    target_image = Image.fromarray(self.video_image)
+                    pnginfo = PngImagePlugin.PngInfo()
+
+                    for item, value in metadata.items():
+                        pnginfo.add_text(item, str(value))
+                    target_image.save(filename_with_ext, pnginfo=pnginfo)
+                    
+                else:
+                    raise ValueError("Media File not png")
+            except Exception as e: # If it's not a PNG or we error out, fall back on saving with open cv
+                cv2.imwrite(filename_with_ext, cv2.cvtColor(self.video_image, cv2.COLOR_BGR2RGB))
+            print(f'Image saved as: {filename_with_ext}')
 
     def remove_target_media_from_list(self, path):
 
