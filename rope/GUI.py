@@ -3774,7 +3774,8 @@ class GUI(tk.Tk):
                 if self.widget['ApplyFaceWeightsSwitch'].get() == True and len(embedding_array) > 1:
 
                     for i in range(len(embedding_array)):
-                        weighted_array.extend([embedding_array[i]] * self.selected_source_faces[i]["EmbeddingWeight"])
+                        if i < len(self.selected_source_faces):
+                            weighted_array.extend([embedding_array[i]] * self.selected_source_faces[i]["EmbeddingWeight"])
                         
                 else:
                     weighted_array = embedding_array
