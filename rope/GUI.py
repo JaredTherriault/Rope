@@ -4304,12 +4304,15 @@ class GUI(tk.Tk):
 
         return new_index
 
-    def select_adjacent_target_media(self, offset : int):
+    def select_adjacent_target_media(self, offset : int, current_index = -1, only_visible = True):
 
-        if not self.media_file:
+        if offset == 0 or not self.media_file:
             return
 
-        new_index = self.find_currently_selected_target_media_index()
+        new_index = current_index
+
+        if new_index == -1:
+            new_index = self.find_currently_selected_target_media_index()
 
         if new_index == -1: # If nothing selected
             return
@@ -4320,8 +4323,13 @@ class GUI(tk.Tk):
         if new_index < 0:
             new_index += target_media_buttons_length
 
-        self.load_target(self.target_media_buttons[new_index].media_file, self.widget['PreviewModeTextSel'].get())
-        self.scroll_to_target_media(self.target_media_buttons[new_index].item_id)
+        if only_visible and not self.target_media_buttons[new_index].visible:
+            # If the button at this index isn't visible, 
+            # recurse with an offset of 1 or -1 starting from new_index until we find a visible one
+            self.select_adjacent_target_media(1 if offset > 0 else -1, new_index, only_visible)
+        else:
+            self.load_target(self.target_media_buttons[new_index].media_file, self.widget['PreviewModeTextSel'].get())
+            self.scroll_to_target_media(self.target_media_buttons[new_index].item_id)
 
     def select_previous_target_media(self):
         self.select_adjacent_target_media(-1)
