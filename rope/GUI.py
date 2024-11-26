@@ -894,8 +894,7 @@ class GUI(tk.Tk):
 
         def on_change_target_media_search_text(mode, name, use_markers):
 
-            new_text = self.widget['TargetMediaSearchBarTextEntry'].get()
-            self.filter_target_media(new_text)
+            self.filter_target_media_with_current_filter_text()
 
         # Search Bar
         self.widget['TargetMediaSearchBarTextEntry'] = GE.Text_Entry_Search(
@@ -3177,6 +3176,10 @@ class GUI(tk.Tk):
     def tokenize_filter_text(self, filter_text):
 
         return filter_text.lower().split(" ")
+
+    def filter_target_media_with_current_filter_text(self):
+        new_text = self.widget['TargetMediaSearchBarTextEntry'].get()
+        self.filter_target_media(new_text)
 
     def filter_target_media(self, filter_text):
 
