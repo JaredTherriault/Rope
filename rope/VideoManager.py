@@ -300,8 +300,16 @@ class VideoManager():
         self.frame_q = []
         self.r_frame_q = []
         self.found_faces = []
-        self.image = cv2.imread(file) # BGR
-        self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB) # RGB
+
+        try:
+            self.image = cv2.imread(file) # BGR
+            self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB) # RGB
+        except:
+            try:
+                self.image = np.array(Image.open(file))
+            except:
+                pass        
+
         temp = [self.image, False]
         self.frame_q.append(temp)
 
