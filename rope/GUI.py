@@ -340,8 +340,8 @@ class GUI(tk.Tk):
         def collapse_faces_panel():
             current_state = self.collapse_bottom.get()
             if current_state:
-                ff_frame.grid(row=5, column=0, sticky='NEWS', padx=0, pady=(1,0))
-                mf_frame.grid(row=6, column=0, sticky='NEWS', padx=0, pady=1)
+                ff_frame.grid(row=6, column=0, sticky='NEWS', padx=0, pady=(1,0))
+                mf_frame.grid(row=7, column=0, sticky='NEWS', padx=0, pady=1)
                 self.after(10, vidupdate)
             else:
                 ff_frame.grid_forget()
