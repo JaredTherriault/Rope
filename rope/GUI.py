@@ -3174,11 +3174,11 @@ class GUI(tk.Tk):
 
         return filter_text.lower().split(" ")
 
-    def filter_target_media_with_current_filter_text(self):
+    def filter_target_media_with_current_filter_text(self, redraw_canvas = True):
         new_text = self.widget['TargetMediaSearchBarTextEntry'].get()
-        self.filter_target_media(new_text)
+        self.filter_target_media(new_text, redraw_canvas)
 
-    def filter_target_media(self, filter_text):
+    def filter_target_media(self, filter_text, redraw_canvas = True):
 
         tokens = self.tokenize_filter_text(filter_text)
 
@@ -3188,7 +3188,8 @@ class GUI(tk.Tk):
             ]
             button.visible = any(token_matches)
 
-        self.redraw_target_media_canvas()
+        if redraw_canvas:
+            self.redraw_target_media_canvas()
 
     def filter_source_faces(self, filter_text):
 
