@@ -89,7 +89,6 @@ class GUI(tk.Tk):
         self.models = models
         self.title_text = 'Rope-Next-00'
         self.title(self.title_text)
-        self.target_video_file = []
         self.action_q = []
         self.video_image = []
         self.video_loaded = False
@@ -101,7 +100,6 @@ class GUI(tk.Tk):
         self.stop_marker_icon = []
         self.window_last_change = []
         self.blank = tk.PhotoImage()
-        self.output_folder = []
         self.output_videos_text = []
         self.target_media_buttons = []
         self.target_media_shuffle_history = set()
@@ -109,7 +107,6 @@ class GUI(tk.Tk):
         self.input_videos_button = []
         self.input_videos_text = []
         self.target_media_canvas = []
-        self.input_videos_button = []
         self.input_faces_text = []
         self.shift_i_len = 0
         self.source_faces_canvas = []
