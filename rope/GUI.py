@@ -276,10 +276,14 @@ class GUI(tk.Tk):
 
 
     @staticmethod
-    def bind_scroll_events(widget, callback):
-        widget.bind("<MouseWheel>",lambda event: callback(event, delta=-int(event.delta / 120))) # Windows
-        widget.bind("<Button-4>", lambda event: callback(event, delta=-1)) # Unix
-        widget.bind("<Button-5>", lambda event: callback(event, delta=1)) # Unix
+    def bind_scroll_events(widget, callback, overwite_existing_bindings = True):
+
+        if overwite_existing_bindings or widget.bind("<MouseWheel>") is None:
+            widget.bind("<MouseWheel>",lambda event: callback(event, delta=-int(event.delta / 120))) # Windows
+        if overwite_existing_bindings or widget.bind("<Button-4>") is None:
+            widget.bind("<Button-4>", lambda event: callback(event, delta=-1)) # Unix
+        if overwite_existing_bindings or widget.bind("<Button-5>") is None:
+            widget.bind("<Button-5>", lambda event: callback(event, delta=1)) # Unix
 
     def handle_key_press(self, event):
         if isinstance(self.focus_get(), tk.Entry):
@@ -1686,6 +1690,17 @@ class GUI(tk.Tk):
                 self.default_params_face_editor_visibility[widget_name] = True
                 if widget_name not in params_face_editor_visibility:
                     params_face_editor_visibility[widget_name] = True
+
+        # Make mouse wheel scroll parameters panel hovering over any parameters widget
+        for widget_name, widget_instance in self.widget.items():
+            if widget_instance.parent == self.layer['parameters_frame']:
+                if isinstance(widget_instance, tk.Widget):
+                    self.bind_scroll_events(widget_instance, self.parameters_mouse_wheel)
+                    
+                # Include child tk widgets
+                for key, value in vars(widget_instance).items():
+                    if isinstance(value, tk.Widget):
+                        self.bind_scroll_events(value, self.parameters_mouse_wheel)
 
         # Apply Parameters Visibility Configuration
         apply_params_visibility_configuration(params_visibility, params_face_editor_visibility, param_type='all', reload=True)
