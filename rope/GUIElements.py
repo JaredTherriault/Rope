@@ -1138,11 +1138,11 @@ class Switch2():
         text_width = self.width-self.toggle_width
 
         # Toggle Switch
-        self.switch = tk.Label(self.frame, style.parameter_switch_3, image=icon_off, width=toggle_width, height=self.height)
+        self.switch = tk.Label(self.frame, style.parameter_switch_3, image=icon_off, width=toggle_width, height=self.height+8, anchor='w')
         if self.state:
             self.switch.configure(image=icon_on)
 
-        self.switch.place(x=self.toggle_x, y=2)
+        self.switch.place(x=self.toggle_x, y=-8)
         self.switch.bind("<ButtonRelease-1>", lambda event: self.toggle_switch(event))
 
         # Text
