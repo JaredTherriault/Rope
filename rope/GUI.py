@@ -104,7 +104,8 @@ class GUI(tk.Tk):
         self.target_media_buttons = []
         self.target_media_shuffle_history = set()
         self.all_target_media_thumbnails_generated = False
-        self.input_videos_button = []
+        self.last_filenames = []
+        self.monitor_directory_delay = None
         self.input_videos_text = []
         self.target_media_canvas = []
         self.input_faces_text = []
@@ -1011,14 +1012,18 @@ class GUI(tk.Tk):
 
         frame = tk.Frame(preview_data, style.canvas_frame_label_2, height = 24, width=100)
         frame.grid(row=0, column=1)
-        self.widget['MaskViewButton'] = GE.Button(frame, 'MaskView', 2, self.toggle_maskview, None, 'control', x=0, y=0, width=100)
+        self.widget['MonitorButton'] = GE.Button(frame, 'Monitor', 2, self.toggle_directory_monitor, None, 'control', x=0, y=0, width=100)
 
         frame = tk.Frame(preview_data, style.canvas_frame_label_2, height = 24, width=100)
         frame.grid(row=0, column=2)
+        self.widget['MaskViewButton'] = GE.Button(frame, 'MaskView', 2, self.toggle_maskview, None, 'control', x=0, y=0, width=100)
+
+        frame = tk.Frame(preview_data, style.canvas_frame_label_2, height = 24, width=100)
+        frame.grid(row=0, column=3)
         self.widget['CompareViewButton'] = GE.Button(frame, 'CompareView', 2, self.toggle_compareview, None, 'control', x=0, y=0, width=100)
 
         frame = tk.Frame(preview_data, style.canvas_frame_label_2, height = 24, width=200)
-        frame.grid(row=0, column=3)
+        frame.grid(row=0, column=4)
         self.widget['PreviewModeTextSel'] = GE.TextSelection(frame, 'PreviewModeTextSel', '', 2, self.set_view, True, 'control', width=200, height=20, row=0, column=0, padx=1, pady=0, text_percent=1)
 
       # Preview Window
@@ -1244,6 +1249,9 @@ class GUI(tk.Tk):
 
         self.static_widget['parameters_scrollbar'] = GE.Scrollbar_y(parameter_scroll_canvas, self.parameters_canvas)
 
+        self.bind_scroll_events(self.layer['parameters_frame'], self.parameters_mouse_wheel)
+        self.bind_scroll_events(self.layer['parameters_face_editor_frame'], self.parameters_mouse_wheel)
+        self.bind_scroll_events(self.parameters_canvas, self.parameters_mouse_wheel)
         self.bind_scroll_events(parameter_scroll_canvas, self.parameters_mouse_wheel)
 
         self.static_widget['30'] = GE.Separator_x(parameters_control_frame, 0, 41)
@@ -3046,17 +3054,85 @@ class GUI(tk.Tk):
             except Exception as e:
                 print(e)
 
+        self.target_media_buttons = []
+        if len(videos) > 0:
+            self.target_media_buttons = self.add_target_media_buttons([], videos)
+
+        self.filter_target_media_with_current_filter_text()
+
+        self.last_filenames = []
+        self.monitor_directory()
+
+    def monitor_directory(self):
+
         # Recursively read all media files from directory
         directory =  self.json_dict["source videos"]
         filenames = [os.path.join(dirpath,f) for (dirpath, dirnames, filenames) in os.walk(directory, followlinks=True) for f in filenames]
 
-        filenames = sorted(filenames, key=str.lower)
+        # Convert both lists to sets
+        set_filenames = set(filenames)
+        set_last_filenames = set(self.last_filenames)
 
-        images = []
-        video_files = []
-        self.target_media_buttons = []
-        self.target_media_canvas.delete("all")
+        # Find files that were in last_filenames but not in filenames (removed files)
+        removed_files = set_last_filenames - set_filenames
 
+        # Find the files that exist in filenames but not in last_filenames
+        new_files = list(set_filenames - set_last_filenames)
+
+        # Remove files that were removed externally
+        if removed_files:
+            self.target_media_shuffle_history = set()
+            
+            for removed_file in removed_files:
+                self.remove_target_media_from_list(removed_file)
+
+        # Add new files and select the newest file
+        if new_files:
+
+            # Sort new_files, newest creation time last
+            new_files = sorted(new_files, key=lambda x: os.path.getctime(x))
+        
+            # Create and extend buttons into button list
+            new_media_buttons = self.add_target_media_buttons(new_files)
+            self.target_media_buttons.extend(new_media_buttons)
+            self.all_target_media_thumbnails_generated = False
+
+            # Filter based on search criteria
+            # Defer redraw unless we have visible new items later
+            redraw_canvas = False
+            self.filter_target_media_with_current_filter_text(redraw_canvas)
+
+            has_visible_images = False
+            for button in new_media_buttons:
+                if button.visible:
+                    has_visible_images = True
+                    break
+
+            if has_visible_images:
+
+                # Redraw to show new items
+                self.redraw_target_media_canvas()
+
+                # Select last unfiltered target_media
+                self.select_adjacent_target_media(-1, 0)
+
+                # Sort alphabetically
+                # self.target_media_buttons = sorted(self.target_media_buttons, key=lambda x: x.media_file.lower())
+
+        if new_files or removed_files:
+            self.last_filenames = filenames
+
+        if self.control['MonitorButton']:
+            if self.monitor_directory_delay:
+                self.after_cancel(self.monitor_directory_delay)
+            self.monitor_directory_delay = self.after(1000, self.monitor_directory)  # 1000 ms = 1 second
+
+    def add_target_media_buttons(self, filenames, videos = None, images = None):
+
+        videos = [] if videos is None else videos 
+        images = [] if images is None else images 
+
+        target_media_buttons = []
         non_animated_image_formats = [
             ".bmp", ".jpeg", ".jpg", ".png", ".tiff", ".tif", ".raw", 
             ".heif", ".heic", ".webp", ".pdf", ".ico", ".avif", ".exr"]
@@ -3065,7 +3141,7 @@ class GUI(tk.Tk):
         for i in range(file_count): # Does not include full path
             file = filenames[i]
             if i % 100 == 0:
-                print(f"Evaluating file {i}/{file_count}")
+                print(f"Evaluating file {i + 1}/{file_count}")
             # Guess File type based on extension
             try:
                 file_type = mimetypes.guess_type(file)[0][:5]
@@ -3154,7 +3230,7 @@ class GUI(tk.Tk):
 
             button = tk.Button(self.target_media_canvas, style.media_button_off_3, height = 115, width = 165)
             button.visible = True
-            self.target_media_buttons.append(button)
+            target_media_buttons.append(button)
             button.photo_image = (
                 ImageTk.PhotoImage(image=Image.fromarray(image)) if has_thumbnail else self.placeholder_thumbnail)
 
@@ -3180,10 +3256,8 @@ class GUI(tk.Tk):
             for i in range(len(videos)):
 
                 create_target_media(i, videos)
-                
-        self.target_media_shuffle_history = set()
-        self.all_target_media_thumbnails_generated = False
-        self.redraw_target_media_canvas()
+
+        return target_media_buttons
 
     def tokenize_filter_text(self, filter_text):
 
@@ -4274,6 +4348,17 @@ class GUI(tk.Tk):
 
         if self.widget['TLPlayButton'].get():
             self.add_action('play_video', 'play')
+
+    def toggle_directory_monitor(self):
+
+        self.widget['MonitorButton'].toggle_button()
+        self.control['MonitorButton'] = self.widget['MonitorButton'].get()
+
+        if self.control['MonitorButton']:
+            self.monitor_directory()
+        else:
+            if self.monitor_directory_delay:
+                self.after_cancel(self.monitor_directory_delay)
 
     def toggle_maskview(self):
         self.widget['MaskViewButton'].toggle_button()
